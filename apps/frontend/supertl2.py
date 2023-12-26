@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 @app.route("/supertl2", methods=["GET"])
 def say_hello():
-    return jsonify({"msg": "Hello from SUPER Training Log 2"})
+    return jsonify({"msg": "Hello from Super Training Log 2"})
 
 
 if __name__ == "__main__":
