@@ -3,3 +3,7 @@ hardware/**/*-backups
 hardware/**/#auto*
 hardware/**/_auto*
 hardware/**/fp-info-cache
+
+
+# Python cache
+__pycache__
