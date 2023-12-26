@@ -17,6 +17,10 @@ getting a training log going.
 
 ## Usage
 
+docker build -t supertl2 .
+docker run -d -p 5000:5000 -v c:\git\supertl2:/app --name supertl2 supertl2
+http://localhost:5000/supertl2
+
 ## Built With
 
 ## Author
