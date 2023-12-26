@@ -1,12 +1,8 @@
-from flask import Flask, jsonify
+from flask import Flask
+from views import views
 
 app = Flask(__name__)
-
-
-@app.route("/supertl2", methods=["GET"])
-def say_hello():
-    return jsonify({"msg": "Hello from Super Training Log 2"})
-
+app.register_blueprint(views, url_prefix="/")
 
 if __name__ == "__main__":
     # Please do not set debug=True in production
