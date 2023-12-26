@@ -1,0 +1,5 @@
+# Kicad files in the hardware folder
+hardware/**/*-backups
+hardware/**/#auto*
+hardware/**/_auto*
+hardware/**/fp-info-cache
