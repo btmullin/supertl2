@@ -1,7 +1,7 @@
-html, body{    height: 100%;    background-color:whitesmoke;    color:rgb(197, 211, 214);}
+html, body{    height: 100%;    background-color:whitesmoke;    color:rgb(238, 250, 253);}
 
 :root {
-    --theme-color-primary: rgb(56, 90, 169);
+    --theme-color-primary: rgb(150, 150, 255);
     --theme-color-accent: rgb(39, 99, 217);
     --theme-corner-radius: 5px;
 }
@@ -10,7 +10,7 @@ html, body{    height: 100%;    background-color:whitesmoke;    color:rgb(197, 2
     height: 100%;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: 10% 8% auto 5%;
+    grid-template-rows: 5% 8% auto 5%;
     grid-gap: 5px;
 }
 
@@ -20,6 +20,12 @@ html, body{    height: 100%;    background-color:whitesmoke;    color:rgb(197, 2
     background-color: var(--theme-color-primary);
     border-radius: var(--theme-corner-radius);
     padding-left: 10px;
+    display: grid;
+    align-items: center;
+}
+
+.title_bar h1 {
+    margin: 0%;
 }
 
 .menu_bar{
@@ -35,7 +41,7 @@ html, body{    height: 100%;    background-color:whitesmoke;    color:rgb(197, 2
     grid-row: 3/4;
     border-style: solid;
     border-radius: var(--theme-corner-radius);
-    border-color: var(--theme-color-accent);
+    border-color: var(--theme-color-primary);
 }
 
 .right_body{
@@ -43,7 +49,7 @@ html, body{    height: 100%;    background-color:whitesmoke;    color:rgb(197, 2
     grid-row: 3/4;
     border-style: solid;
     border-radius: var(--theme-corner-radius);
-    border-color: var(--theme-color-accent);
+    border-color: var(--theme-color-primary);
 }
 
 .footer{
