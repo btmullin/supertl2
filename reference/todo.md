@@ -1,6 +1,15 @@
 - [X] figure out why volumes are working in the Docker container
     - Turns out needed to run the docker run command from in Power Shell.  Something odd happens in git bash
 - [X] figure out how to run the IDE in the container [link](https://www.youtube.com/watch?v=0H2miBK_gAk)
-- [ ] Running in container only works if you can leave the container up and don't have to keep restarting it to restart flask
-- [ ] convert to Docker Compose?
-- [ ] create a basic outline of a user interface with some templates or something
+- [X] Running in container only works if you can leave the container up and don't have to keep restarting it to restart flask
+- [X] convert to Docker Compose?
+  - Don't see a need right now
+- Create a basic outline of a user interface with some templates or something
+  - [X] Calendar place holder
+  - [X] Gear place holder
+  - [X] Analysis place holder
+  - [X] Import mainscreen place holder
+- Make import screen
+  - [ ] Select file
+  - [ ] Where does it go and how does it actually process the file?
+  - [ ] Process fit file to produce summary
