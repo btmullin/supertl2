@@ -1,1 +1,1 @@
-docker run --rm -d -p 5000:5000 -v /c/git/supertl2:/app --name supertl2 supertl2
+docker run --rm -p 5000:5000 -v /c/git/supertl2:/app --name supertl2 supertl2
