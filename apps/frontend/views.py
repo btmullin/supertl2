@@ -3,8 +3,9 @@ from flask import Blueprint, jsonify, render_template, request, url_for
 views = Blueprint(__name__, "views")
 
 @views.route("/")
-def home():
-    return render_template('index.html')
+@views.route("/dashboard")
+def dashboard():
+    return render_template('dashboard.html')
 
 @views.route("/test")
 def test():

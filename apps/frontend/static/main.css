@@ -3,25 +3,29 @@
   --theme-color-primary: rgb(150, 150, 255);
   --theme-color-accent: rgb(61, 116, 224);
   --theme-corner-radius: 15px;
+  --theme-font-color: rgb(253, 238, 238);
 }
 
 html,
 body {
   height: 100%;
   background-color: var(--theme-background-color);
-  color: rgb(238, 250, 253);
+  color: red;
 }
 
 .large-text {
   font-size: 25px;
+  color: var(--theme-font-color);
 }
 
 .medium-text {
   font-size: 20px;
+  color: var(--theme-font-color);
 }
 
 .small-text {
   font-size: 15px;
+  color: var(--theme-font-color);
 }
 
 .page-layout {
@@ -41,6 +45,7 @@ body {
   padding-bottom: 5px;
   display: grid;
   align-items: center;
+  color: var(--theme-font-color);
 }
 
 .title-bar h1 {
@@ -64,8 +69,24 @@ body {
   border-color: var(--theme-color-primary);
 }
 
+.left-body h2 {
+  background-color: var(--theme-color-primary);
+}
+
+.left-body * {
+  padding-left: 10px;
+}
+
 .right-body {
   grid-column: -3/-1;
+  grid-row: 3/4;
+  border-style: solid;
+  border-radius: var(--theme-corner-radius);
+  border-color: var(--theme-color-primary);
+}
+
+.whole-body {
+  grid-column: 1/-1;
   grid-row: 3/4;
   border-style: solid;
   border-radius: var(--theme-corner-radius);
@@ -97,7 +118,6 @@ body {
   font-size: 20px;
 }
 
-.left-body h2 {
-  padding-left: 0.5em;
-  background-color: var(--theme-color-primary);
+a.nav-link {
+  color: var(--theme-font-color) !important;
 }
