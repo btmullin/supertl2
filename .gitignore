@@ -7,3 +7,6 @@ hardware/**/fp-info-cache
 
 # Python cache
 __pycache__
+
+# Uploaded files
+uploads

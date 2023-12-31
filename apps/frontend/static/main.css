@@ -1,0 +1,123 @@
+:root {
+  --theme-background-color: whitesmoke;
+  --theme-color-primary: rgb(150, 150, 255);
+  --theme-color-accent: rgb(61, 116, 224);
+  --theme-corner-radius: 15px;
+  --theme-font-color: rgb(253, 238, 238);
+}
+
+html,
+body {
+  height: 100%;
+  background-color: var(--theme-background-color);
+  color: red;
+}
+
+.large-text {
+  font-size: 25px;
+  color: var(--theme-font-color);
+}
+
+.medium-text {
+  font-size: 20px;
+  color: var(--theme-font-color);
+}
+
+.small-text {
+  font-size: 15px;
+  color: var(--theme-font-color);
+}
+
+.page-layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: min-content min-content auto min-content;
+  grid-gap: 5px;
+  padding: 5px;
+}
+
+.title-bar {
+  grid-column: 1/-1;
+  grid-row: 1/2;
+  background-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  padding-bottom: 5px;
+  display: grid;
+  align-items: center;
+  color: var(--theme-font-color);
+}
+
+.title-bar h1 {
+  margin: 0%;
+  padding-left: 0.5em;
+}
+
+.menu-bar {
+  grid-column: 1/-1;
+  grid-row: 2/3;
+  background-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  padding: 0px;
+}
+
+.left-body {
+  grid-column: 1/3;
+  grid-row: 3/4;
+  border-style: solid;
+  border-radius: var(--theme-corner-radius);
+  border-color: var(--theme-color-primary);
+}
+
+.left-body h2 {
+  background-color: var(--theme-color-primary);
+}
+
+.left-body * {
+  padding-left: 10px;
+}
+
+.right-body {
+  grid-column: -3/-1;
+  grid-row: 3/4;
+  border-style: solid;
+  border-radius: var(--theme-corner-radius);
+  border-color: var(--theme-color-primary);
+}
+
+.whole-body {
+  grid-column: 1/-1;
+  grid-row: 3/4;
+  border-style: solid;
+  border-radius: var(--theme-corner-radius);
+  border-color: var(--theme-color-primary);
+}
+
+.footer {
+  grid-column: 1/-1;
+  grid-row: -2/-1;
+  text-align: center;
+  background-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  /* display: grid; */
+  /* align-items: center; */
+}
+
+.footer p {
+  margin: 0em;
+}
+
+.nav-tabs {
+  border-radius: var(--theme-corner-radius);
+}
+
+.nav-tabs .nav-link {
+  border-top-left-radius: var(--theme-corner-radius);
+  border-top-right-radius: var(--theme-corner-radius);
+  border-radius: var(--theme-corner-radius);
+  font-size: 20px;
+}
+
+a.nav-link {
+  color: var(--theme-font-color) !important;
+}

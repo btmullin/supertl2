@@ -9,9 +9,9 @@ getting a training log going.
 
 ## Links
 
-- [Repo](...)
+- [Repo](https://github.com/btmullin/supertl2)
 - [Live](...)
-- [Bugs](...)
+- [Bugs](https://github.com/btmullin/supertl2/issues)
 
 ## Screenshots
 

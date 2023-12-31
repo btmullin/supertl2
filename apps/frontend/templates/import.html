@@ -1,0 +1,9 @@
+{% extends 'base.html' %} {% block content %}
+<div class="whole-body">
+  <h2>Import an Activity</h2>
+  <form method=post enctype=multipart/form-data>
+    <input type=file name=file>
+    <input type=submit value=Upload>
+  </form>
+</div>
+{% endblock %}
