@@ -10,6 +10,9 @@
   - [X] Analysis place holder
   - [X] Import mainscreen place holder
 - Make import screen
-  - [ ] Select file
+  - [X] Select file
   - [ ] Where does it go and how does it actually process the file?
   - [ ] Process fit file to produce summary
+  - [ ] Does this help any [Tutorial](https://flask.palletsprojects.com/en/2.3.x/tutorial/)
+- How do we handle the actual application data and a configuration for test vs production?
+  - [ ] [Read This](https://medium.com/vteam/configure-docker-project-for-different-environments-using-docker-compose-3-bfbef37d951c)
