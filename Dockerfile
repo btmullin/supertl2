@@ -5,6 +5,7 @@ RUN pip install -r requirements.txt
 COPY . .
 EXPOSE 5000
 ENV FLASK_APP=apps/frontend/supertl2.py
+ENV PYTHONPATH=/app/apps/common
 CMD ["flask", "run", "--host", "0.0.0.0"]
 
 # If you ever want to build an image that just runs a bash shell to launch flask manually
