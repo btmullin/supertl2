@@ -1,0 +1,30 @@
+ul.activity_info {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.activity_info li {
+    display: inline-block;
+    padding-inline-start: 0;
+    text-align: center;
+    background-color: var(--theme-color-primary);
+    padding: 0.5em;
+    /* margin: 5px; */
+    border: 2px solid var(--theme-color-accent);
+    border-radius: var(--theme-corner-radius);
+    color: var(--theme-font-color);
+    min-width: 150px;
+    min-height: 100px;
+}
+
+.primary_data {
+    font-size: x-large;
+    font-weight: bold;
+    margin: 0;
+}
+
+.secondary_data {
+    font-size: medium;
+    margin: 0;
+}
