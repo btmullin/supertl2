@@ -10,6 +10,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 import os
+from trainingdata.activity import Activity
 
 views = Blueprint(__name__, "views")
 
@@ -74,7 +75,8 @@ def activity_view():
 def import_summary():
     args = request.args
     file_name = args.get("file_name")
-    return render_template("import_summary.html", file_name=file_name)
+    activity = Activity(os.path.join(current_app.config["UPLOAD_FOLDER"], file_name))
+    return render_template("import_summary.html", activity=activity)
 
 
 @views.route("/test")
