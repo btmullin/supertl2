@@ -91,6 +91,7 @@ body {
   border-style: solid;
   border-radius: var(--theme-corner-radius);
   border-color: var(--theme-color-primary);
+  padding: 5px;
 }
 
 .footer {
