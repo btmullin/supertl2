@@ -1,7 +1,7 @@
 from flask import Flask
 from views import views
 
-UPLOAD_FOLDER = '/app/apps/frontend/static/uploads'
+UPLOAD_FOLDER = '/app/apps/backend/static/uploads'
 ALLOWED_EXTENSIONS = {'fit'}
 
 app = Flask(__name__)
