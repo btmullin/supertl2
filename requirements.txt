@@ -1,2 +1,5 @@
 Werkzeug==2.2.2
 flask==2.2.2
+garmin_fit_sdk==21.126.0
+numpy==1.26.2
+pandas==2.1.4

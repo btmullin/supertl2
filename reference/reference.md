@@ -1,0 +1,1 @@
+[Fit File Definition](https://developer.garmin.com/fit/file-types/activity/)

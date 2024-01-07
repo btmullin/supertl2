@@ -11,8 +11,15 @@
   - [X] Import mainscreen place holder
 - Make import screen
   - [X] Select file
-  - [ ] Where does it go and how does it actually process the file?
-  - [ ] Process fit file to produce summary
+  - [X] ~~*Figure out how to make a local package in common for all of the training data modules*~~ [2023-12-31]
+  - [X] ~~*Create a training data class*~~ [2023-12-31]
+  - [X] ~~*Where does it go and how does it actually process the file?*~~ [2024-01-01]
+  - [X] ~~*Process fit file to produce summary*~~ [2024-01-01]
+  - [ ] Finish creating the selection of basic information for import
   - [ ] Does this help any [Tutorial](https://flask.palletsprojects.com/en/2.3.x/tutorial/)
+- Start of a database
+  - [ ] When we click save on import screen... where does it go?
+  - [ ] Saving of summary information to database
+  - [ ] Move of the gps file to "cold storage"
 - How do we handle the actual application data and a configuration for test vs production?
   - [ ] [Read This](https://medium.com/vteam/configure-docker-project-for-different-environments-using-docker-compose-3-bfbef37d951c)
