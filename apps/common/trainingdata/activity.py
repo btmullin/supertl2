@@ -9,11 +9,13 @@ import pandas as pd
 @dataclass
 class ActivitySummary:
     title: str = "Untitled Workout"
-    start: datetime = datetime.now()
+    description: str = ""
+    start_time: datetime = datetime.now()
     distance_m: float = 0.0
     active_duration_s: float = 0.0
-    elapsed_duration: float = 0.0
+    elapsed_duration_s: float = 0.0
     elevation_m: float = 0.0
+    avg_hr_bpm: float = 0.0
     avg_speed_mps: float = 0.0
 
     def __init__(self, source_file: str) -> None:
@@ -40,7 +42,7 @@ class ActivitySummary:
         messages, errors = decoder.read()
 
         session_data = messages['session_mesgs'][0]
-        self.start = session_data['start_time']
+        self.start_time = session_data['start_time']
         self.distance_m = session_data['total_distance']
         self.active_duration_s = session_data['total_timer_time']
         self.elapsed_duration_s = session_data['total_elapsed_time']
