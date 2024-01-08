@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 import os
 from trainingdata.activity import Activity
 
-views = Blueprint(__name__, "views")
+views = Blueprint("views", __name__)
 
 
 def allowed_file(filename):

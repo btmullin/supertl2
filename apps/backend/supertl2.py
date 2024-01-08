@@ -1,15 +1,6 @@
-from flask import Flask
-from views import views
+from app import create_app
 
-UPLOAD_FOLDER = '/app/apps/backend/static/uploads'
-ALLOWED_EXTENSIONS = {'fit'}
-
-app = Flask(__name__)
-app.jinja_env.auto_reload = True
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['ALLOWED_EXTENSIONS'] = ALLOWED_EXTENSIONS
-app.register_blueprint(views, url_prefix="/")
+app = create_app()
 
 if __name__ == "__main__":
     # Please do not set debug=True in production
