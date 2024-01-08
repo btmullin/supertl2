@@ -6,7 +6,7 @@ RUN apt update
 RUN apt install sqlite3
 COPY . .
 EXPOSE 5000
-ENV FLASK_APP=apps/frontend/supertl2.py
+ENV FLASK_APP=apps/backend/supertl2.py
 ENV PYTHONPATH=/app/apps/common
 CMD ["flask", "run", "--host", "0.0.0.0"]
 
