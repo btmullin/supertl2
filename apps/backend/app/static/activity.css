@@ -2,6 +2,8 @@ ul.activity_info {
     list-style-type: none;
     margin: 0;
     padding: 0;
+    display: flex;
+    justify-content: space-around;
 }
 
 .activity_info li {
@@ -10,12 +12,13 @@ ul.activity_info {
     text-align: center;
     background-color: var(--theme-color-primary);
     padding: 0.5em;
-    /* margin: 5px; */
+    margin: 5px;
     border: 2px solid var(--theme-color-accent);
     border-radius: var(--theme-corner-radius);
     color: var(--theme-font-color);
     min-width: 150px;
     min-height: 100px;
+    flex-grow: 1;
 }
 
 .primary_data {
