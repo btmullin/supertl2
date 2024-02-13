@@ -122,3 +122,36 @@ body {
 a.nav-link {
   color: var(--theme-font-color) !important;
 }
+
+input[type="text"], input[type="email"], input[type="number"], textarea {
+  /* width: 100%; */
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+  font-size: medium;
+}
+
+label {
+  color: var(--theme-font-color);
+  display: block;
+  margin-bottom: 5px;
+  font-size: x-large;
+  font-weight: bold;
+  background-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  padding-left: 0.5em;
+}
+
+input[type="submit"], input[type="cancel"] {
+  background-color: var(--theme-color-accent);
+  color: var(--theme-font-color);
+  padding: 10px 20px;
+  margin: 10px 0;
+  border: none;
+  border-radius: var(--theme-corner-radius);
+  cursor: pointer;
+  font-size: x-large;
+  font-weight: bold;
+}
