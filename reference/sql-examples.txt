@@ -12,4 +12,4 @@ WITH RECURSIVE category_hierarchy(id, name, parent, level, hierarchy_path) AS (
     JOIN category_hierarchy ch ON c.parent = ch.id
 )
 
-SELECT hierarchy_path FROM category_hierarchy ORDER BY hierarchy_path;
+SELECT hierarchy_path, id FROM category_hierarchy ORDER BY hierarchy_path;
