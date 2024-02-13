@@ -10,32 +10,40 @@
 
 {% block content %}
 <div class="whole-body">
-    <h1>Import Summary</h1>
-    <div>
-        <ul class="activity_info">
-            <li>
-                <p class="primary_data">{{activity.summary.distance_m}}</p>
-                <p class="secondary_data">Distance (m)</p>
-            </li>
-            <li>
-                <p class="primary_data">{{activity.summary.get_active_time()}}</p>
-                <p class="secondary_data">Time</p>
-            </li>
-            <li>
-                <p class="primary_data">{{activity.summary.elevation_m}}</p>
-                <p class="secondary_data">Elevation (m)</p>
-            </li>
-            <li>
-                <p class="primary_data">{{activity.summary.avg_speed_mps}}</p>
-                <p class="secondary_data">Avg speed (m/s)</p>
-            </li>
-        </ul>
-        <br>
-        <label for="title">Activity Title:</label>
-        <input type="text" id="title" name="title">
-        <br><br>
-        <input type="submit" id="submit" value="Save">
-        <input type="submit" id="cancel" value="Cancel">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; row-gap: 10px;">
+        <div>
+            <ul class="activity_info">
+                <li>
+                    <p class="primary_data">{{activity.summary.distance_m}}</p>
+                    <p class="secondary_data">Distance (m)</p>
+                </li>
+                <li>
+                    <p class="primary_data">{{activity.summary.get_active_time()}}</p>
+                    <p class="secondary_data">Time</p>
+                </li>
+                <li>
+                    <p class="primary_data">{{activity.summary.elevation_m}}</p>
+                    <p class="secondary_data">Elevation (m)</p>
+                </li>
+                <li>
+                    <p class="primary_data">{{activity.summary.avg_speed_mps}}</p>
+                    <p class="secondary_data">Avg speed (m/s)</p>
+                </li>
+            </ul>
+        </div>
+        <div></div>
+        <div>
+            <form action="/submit" method="post">
+                <label for="title" style="width: 100%;">Activity Title:</label>
+                <input type="text" id="title" name="title" style="width: 100%;">
+                <br><br>
+                <label for="description" style="width: 100%;">Description:</label>
+                <textarea rows="5" id="description" name="description" style="width: 100%;"></textarea>
+                <br><br>
+                <input type="submit" id="submit" value="Save">
+                <input type="submit" id="cancel" value="Cancel">
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
