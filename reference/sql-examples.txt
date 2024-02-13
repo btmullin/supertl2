@@ -1,0 +1,15 @@
+-- How to recursively query the category and put it in order
+WITH RECURSIVE category_hierarchy(id, name, parent, level, hierarchy_path) AS (
+    SELECT id, name, parent, 0 as level, name as hierarchy_path
+    FROM category
+    WHERE parent IS NULL
+
+    UNION ALL
+
+    SELECT c.id, c.name, c.parent, ch.level + 1,
+           ch.hierarchy_path || ':' || c.name
+    FROM category c
+    JOIN category_hierarchy ch ON c.parent = ch.id
+)
+
+SELECT hierarchy_path FROM category_hierarchy ORDER BY hierarchy_path;
