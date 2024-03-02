@@ -7,7 +7,7 @@ CREATE TABLE activity (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT,
     description TEXT,
-    category INTEGER,
+    category_id INTEGER,
     start_time DATETIME,
     distance_m FLOAT,
     active_duration_s FLOAT,
@@ -21,5 +21,6 @@ CREATE TABLE activity (
 CREATE TABLE category (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent INTEGER,
-    name TEXT
+    name TEXT,
+    FOREIGN KEY(parent) REFERENCES category(id)
 );
