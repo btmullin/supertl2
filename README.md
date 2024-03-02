@@ -24,7 +24,7 @@ docker run --rm -d -p 5000:5000 -v c:\git\supertl2:/app --name supertl2 supertl2
 ```
 
 From browser:
-[http://localhost:5000/supertl2](http://localhost:5000/supertl2)
+[http://localhost:5000/](http://localhost:5000/)
 
 ## Built With
 
