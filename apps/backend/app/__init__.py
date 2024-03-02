@@ -26,6 +26,8 @@ def create_app():
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.config['UPLOAD_FOLDER'] = '/data/uploads'
     app.config['ALLOWED_EXTENSIONS'] = {'fit'}
+    # TODO - Figure out what a secretkey really should be
+    app.config['SECRET_KEY'] = 'secretkey'
 
     # Ensure upload directory exists
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -39,10 +41,17 @@ def create_app():
         connection = create_connection()
         cursor = connection.cursor()
 
-        # Read schema file and execute SQL commands
-        with app.open_resource('/app/apps/backend/schema.sql') as f:
-            sql_script = f.read().decode('utf-8')
-            cursor.executescript(sql_script)
+        # TODO - If the db is empty initialize it (currently always initialized)
+        if True:
+            # Read schema file and execute SQL commands
+            with app.open_resource('/app/apps/backend/schema.sql') as f:
+                sql_script = f.read().decode('utf-8')
+                cursor.executescript(sql_script)
+            
+            # Read the initial data and execute SQL commands
+            with app.open_resource('/app/apps/backend/data.sql') as f:
+                sql_script = f.read().decode('utf-8')
+                cursor.executescript(sql_script)
 
         connection.commit()
         cursor.close()
