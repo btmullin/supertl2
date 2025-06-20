@@ -33,15 +33,19 @@
         </div>
         <div></div>
         <div>
-            <form action="/submit" method="post">
-                <label for="title" style="width: 100%;">Activity Title:</label>
-                <input type="text" id="title" name="title" style="width: 100%;">
+            <!-- <form action="/submit" method="post"> -->
+            <form method="post">
+                {{ form.csrf_token }}
+                {{ form.category_field.label }}{{ form.category_field }}
                 <br><br>
-                <label for="description" style="width: 100%;">Description:</label>
-                <textarea rows="5" id="description" name="description" style="width: 100%;"></textarea>
+                {{ form.activity_title.label }}{{ form.activity_title }}
                 <br><br>
-                <input type="submit" id="submit" value="Save">
-                <input type="submit" id="cancel" value="Cancel">
+                {{ form.description.label }}{{ form.description }}
+                <br><br>
+                {{ form.save }}
+                {{ form.cancel }}
+                <!-- <input type="submit" id="submit" value="Save">
+                <input type="submit" id="cancel" value="Cancel"> -->
             </form>
         </div>
     </div>

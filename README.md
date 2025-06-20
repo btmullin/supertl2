@@ -17,11 +17,22 @@ getting a training log going.
 
 ## Usage
 
+### Setup/Basic Use
+
 In PowerShell:
 ```
 docker build -t supertl2 .
 docker run --rm -d -p 5000:5000 -v c:\git\supertl2:/app --name supertl2 supertl2
 ```
+
+### Handy Startup
+
+In PowerShell:
+```
+startdetached.bat
+```
+
+### Opening The App
 
 From browser:
 [http://localhost:5000/](http://localhost:5000/)

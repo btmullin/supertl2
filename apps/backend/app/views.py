@@ -11,6 +11,8 @@ from flask import (
 from werkzeug.utils import secure_filename
 import os
 from trainingdata.activity import Activity
+from .forms import ImportSummaryForm
+import sys
 
 views = Blueprint("views", __name__)
 
@@ -71,12 +73,28 @@ def activity_view():
     return render_template("activity.html", id=activity_id)
 
 
-@views.route("/import_summary")
+@views.route("/import_summary", methods=['GET', 'POST'])
 def import_summary():
-    args = request.args
-    file_name = args.get("file_name")
-    activity = Activity(os.path.join(current_app.config["UPLOAD_FOLDER"], file_name))
-    return render_template("import_summary.html", activity=activity)
+    form = ImportSummaryForm.ImportSummaryForm(request.form)
+    if request.method == 'GET':
+        args = request.args
+        file_name = args.get("file_name")
+        form.activity = Activity(os.path.join(current_app.config["UPLOAD_FOLDER"], file_name))
+
+        return render_template("import_summary.html", activity=form.activity, form=form)
+    else:
+        # user pressed a button
+        if form.save.data:
+            print('Save button pressed', file=sys.stderr)
+            print(f'Description: {form.description.data}', file=sys.stderr)
+            print(f'Category: {form.category_field.data}', file=sys.stderr)
+            print(f'Activity info?: {form.activity.summary.distance_m}', file=sys.stderr)
+            # TODO - Here is where we can take the data from the activity and
+            # from the form and save it
+            # WONDER IF THERE IS A WAY TO NOT RECREATE THE ACTIVITY AGAIN....
+        elif form.cancel.data:
+            print('Cancel button pressed', file=sys.stderr)
+        return 'HELP ME'
 
 
 @views.route("/test")
