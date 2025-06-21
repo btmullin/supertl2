@@ -172,7 +172,7 @@ input[type="submit"], input[type="cancel"] {
   border-collapse: collapse;
   border-radius: var(--theme-corner-radius);
   overflow: hidden;
-  font-size: 16px;
+  font-size: 18px;
   background-color: white;
   color: black;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -200,4 +200,18 @@ input[type="submit"], input[type="cancel"] {
 .styled-table tbody tr:hover {
   background-color: var(--theme-color-accent);
   color: var(--theme-font-color);
+}
+
+.pagination {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+  font-size: 1.2em;
+}
+
+.pagination a {
+  text-decoration: none;
+  color: var(--theme-color-accent);
+  font-weight: bold;
 }
