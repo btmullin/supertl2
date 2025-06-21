@@ -1,7 +1,40 @@
 {% extends 'base.html' %} {% block content %}
-<div class="left-body">
-  <h2>Recent Workouts</h2>
-  <a href="{{url_for('views.activity_view')}}">Link To A Specific Activity</a>
-</div>
-<div class="right-body" style="color: black">Summaries (weekly/monthly)</div>
+<div class="whole-body">
+  <div class="section" style="color: black">Summaries (weekly/monthly)</div>
+  <div class="section">
+    <h2>Recent Workouts</h2>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date/Time</th>
+          <th>Sport</th>
+          <th>Name</th>
+          <th>Distance</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      {% for activity in activities %}
+      <tr>
+          <td>{{ activity.ActivityId }}</td>
+          <td>{{ activity.startDateTime }}</td>
+          <td>{{ activity.sportType }}</td>
+          <td>{{ activity.name }}</td>
+          <td>{{ activity.distance }}</td>
+          <td>{{ activity.movingTimeInSeconds | format_duration }}</td>
+      </tr>
+      {% endfor %}  
+    </table>
+    <div class="pagination">
+      {% if page > 1 %}
+        <a href="{{ url_for('views.dashboard', page=page-1) }}">Previous</a>
+      {% endif %}
+    
+      <span>Page {{ page }} of {{ total_pages }}</span>
+    
+      {% if page < total_pages %}
+        <a href="{{ url_for('views.dashboard', page=page+1) }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
 {% endblock %}

@@ -13,6 +13,9 @@ import os
 from trainingdata.activity import Activity
 from .forms import ImportSummaryForm
 import sys
+from app.db import get_strava_db
+
+PER_PAGE = 20
 
 views = Blueprint("views", __name__)
 
@@ -28,7 +31,21 @@ def allowed_file(filename):
 @views.route("/")
 @views.route("/dashboard")
 def dashboard():
-    return render_template("dashboard.html")
+    page = request.args.get('page', 1, type=int)
+    offset = (page - 1) * PER_PAGE
+    strava_db = get_strava_db()
+
+    # Get total number of rows
+    total = strava_db.execute("SELECT COUNT(*) FROM Activity").fetchone()[0]
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE
+    
+    # Fetch just the current page
+    rows = strava_db.execute(
+        "SELECT activityId, startDateTime, sportType, name, distance, movingTimeInSeconds FROM Activity ORDER BY startDateTime DESC LIMIT ? OFFSET ?",
+        (PER_PAGE, offset)
+    ).fetchall()
+    
+    return render_template("dashboard.html", activities=rows, page=page, total_pages=total_pages)
 
 
 @views.route("/calendar")
