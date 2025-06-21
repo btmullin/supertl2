@@ -19,17 +19,14 @@ getting a training log going.
 
 ### Setup/Basic Use
 
-In PowerShell:
+To setup the Docker container, in PowerShell:
 ```
-docker build -t supertl2 .
-docker run --rm -d -p 5000:5000 -v c:\git\supertl2:/app --name supertl2 supertl2
+docker compose build
 ```
 
-### Handy Startup
-
-In PowerShell:
+To start the Docker container, in PowerShell:
 ```
-startdetached.bat
+docker compose up
 ```
 
 ### Opening The App

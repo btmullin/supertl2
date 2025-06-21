@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: supertl2
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./db:/db           # ✅ bind mount for persistent, inspectable DB
+      - .:/app                 # Mount your source code into the container
+    environment:
+      FLASK_ENV: development   # Enables debug mode and auto-reload
+      FLASK_DEBUG: 1
+      FLASK_APP: apps/backend/supertl2.py
+      PYTHONPATH: /app/apps/common
+    command: flask run --host=0.0.0.0
