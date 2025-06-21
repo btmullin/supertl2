@@ -1,17 +1,9 @@
 import sqlite3
-from flask import Flask
+from flask import Flask, g
 from .views import views
 import os
-
-# Function to create the SQLite database connection
-def create_connection():
-    """Create the db connection
-
-    Returns:
-        Connection: The db connection.
-    """
-    connection = sqlite3.connect('/data/supertl2.db')
-    return connection
+from .db import initialize_dbs
+from .filters import register_filters
 
 # Initialize Flask app
 def create_app():
@@ -36,24 +28,11 @@ def create_app():
     # Import blueprints/routes
     app.register_blueprint(views, url_prefix="/")
 
-    # Create database connection
-    with app.app_context():
-        connection = create_connection()
-        cursor = connection.cursor()
+    # Register formatting filters
+    register_filters(app)
 
-        # TODO - If the db is empty initialize it (currently always initialized)
-        if True:
-            # Read schema file and execute SQL commands
-            with app.open_resource('/app/apps/backend/schema.sql') as f:
-                sql_script = f.read().decode('utf-8')
-                cursor.executescript(sql_script)
-            
-            # Read the initial data and execute SQL commands
-            with app.open_resource('/app/apps/backend/data.sql') as f:
-                sql_script = f.read().decode('utf-8')
-                cursor.executescript(sql_script)
-
-        connection.commit()
-        cursor.close()
+    # Initialize dbs
+    # TODO - Call to init_db function(s)
+    initialize_dbs()
 
     return app
