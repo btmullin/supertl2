@@ -4,6 +4,7 @@
   --theme-color-accent: rgb(61, 116, 224);
   --theme-corner-radius: 15px;
   --theme-font-color: rgb(253, 238, 238);
+  --theme-content-font-color: black;
 }
 
 html,
@@ -92,6 +93,16 @@ body {
   border-radius: var(--theme-corner-radius);
   border-color: var(--theme-color-primary);
   padding: 5px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* adds space between stacked items */}
+
+.section {
+  border-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  padding: 10px;
+  color: var(--content-font-color);
 }
 
 .footer {
@@ -154,4 +165,39 @@ input[type="submit"], input[type="cancel"] {
   cursor: pointer;
   font-size: x-large;
   font-weight: bold;
+}
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: var(--theme-corner-radius);
+  overflow: hidden;
+  font-size: 16px;
+  background-color: white;
+  color: black;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.styled-table thead {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color);
+}
+
+.styled-table th, 
+.styled-table td {
+  padding: 12px 15px;
+  text-align: left;
+}
+
+.styled-table tbody tr {
+  border-bottom: 1px solid #dddddd;
+}
+
+.styled-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.styled-table tbody tr:hover {
+  background-color: var(--theme-color-accent);
+  color: var(--theme-font-color);
 }
