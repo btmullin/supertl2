@@ -13,3 +13,19 @@ WITH RECURSIVE category_hierarchy(id, name, parent, level, hierarchy_path) AS (
 )
 
 SELECT hierarchy_path, id FROM category_hierarchy ORDER BY hierarchy_path;
+
+-- To get the full path for a specific categoryId:
+WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
+  SELECT id, name, parent_id, name
+  FROM Category
+  WHERE id = 6  -- target category ID (e.g., Skate)
+
+  UNION ALL
+
+  SELECT c.id, c.name, c.parent_id, c.name || ' > ' || cp.full_path
+  FROM Category c
+  JOIN category_path cp ON cp.parent_id = c.id
+)
+
+SELECT full_path FROM category_path
+WHERE parent_id IS NULL;  -- top-level ancestor row (root path)
