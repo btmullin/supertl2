@@ -32,7 +32,6 @@ def create_app():
     register_filters(app)
 
     # Initialize dbs
-    # TODO - Call to init_db function(s)
     initialize_dbs()
 
     return app
