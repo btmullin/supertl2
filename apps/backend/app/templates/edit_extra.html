@@ -2,40 +2,71 @@
 {% block content %}
 <div class="whole-body">
   <div class="section">
-    <h2>Edit Metadata for {{ activityId }}</h2>
-    <form method="POST">
-      {{ form.hidden_tag() }}
+    <h2>Edit Activity: {{ activityId }}</h2>
+    <div style="display: flex; flex-direction: row; gap: 2em; flex-wrap: wrap;">
 
-      <div class="form-group">
-        <label>{{ form.workoutTypeId.label }}</label>
-        {{ form.workoutTypeId() }}
+      <!-- Left: Strava Info -->
+      <div style="flex: 1; min-width: 300px;">
+        <h3>Strava Activity Info</h3>
+        <table class="styled-table">
+          <tbody>
+            <tr><th>Start Time</th><td>{{ activity.startDateTime | pretty_datetime }}</td></tr>
+            <tr><th>Sport</th><td>{{ activity.sportType }}</td></tr>
+            <tr><th>Name</th><td>{{ activity.name }}</td></tr>
+            <tr><th>Distance</th><td>{{ activity.distance | km }}</td></tr>
+            <tr><th>Duration</th><td>{{ activity.movingTimeInSeconds | format_duration }}</td></tr>
+            <tr><th>Calories</th><td>{{ activity.calories or "—" }}</td></tr>
+            <tr><th>Avg HR</th><td>{{ activity.averageHeartRate or "—" }}</td></tr>
+            <tr><th>Max HR</th><td>{{ activity.maxHeartRate or "—" }}</td></tr>
+            <tr><th>Power</th><td>{{ activity.averagePower or "—" }}</td></tr>
+            <tr><th>Description</th><td>{{ activity.description or "—" }}</td></tr>
+          </tbody>
+        </table>
+        <iframe height='405' width='590' frameborder='0' allowtransparency='true' scrolling='no'
+            src='https://www.strava.com/activities/{{ activity.activityId }}/embed/'>
+        </iframe>
       </div>
 
-      <div class="form-group">
-        <label>{{ form.categoryId.label }}</label>
-        {{ form.categoryId() }}
-      </div>
+      <!-- Right: Editable Fields -->
+      <div style="flex: 1; min-width: 300px;">
+        <h3>Edit Metadata</h3>
+        <form method="POST">
+          {{ form.hidden_tag() }}
 
-      <div class="form-group">
-        <label>{{ form.notes.label }}</label>
-        {{ form.notes(rows=4) }}
-      </div>
+          <div class="form-group">
+            <label>{{ form.workoutTypeId.label }}</label>
+            {{ form.workoutTypeId() }}
+          </div>
 
-      <div class="form-group">
-        <label>{{ form.tags.label }}</label>
-        {{ form.tags() }}
-      </div>
+          <div class="form-group">
+            <label>{{ form.categoryId.label }}</label>
+            {{ form.categoryId() }}
+          </div>
 
-      <div class="checkbox-wrapper">
-        {{ form.isTraining() }}
-        <label style="background: none; color: black; font-size: 1em; margin: 0;">{{ form.isTraining.label.text }}</label>
-      </div>
+          <div class="form-group">
+            <label>{{ form.notes.label }}</label>
+            {{ form.notes(rows=4) }}
+          </div>
 
-      <div>
-        {{ form.submit() }}
-        {{ form.cancel() }}
+          <div class="form-group">
+            <label>{{ form.tags.label }}</label>
+            {{ form.tags() }}
+          </div>
+
+          <div class="checkbox-wrapper">
+            {{ form.isTraining() }}
+            <label style="background: none; color: black; font-size: 1em; margin: 0;">
+              {{ form.isTraining.label.text }}
+            </label>
+          </div>
+
+          <div>
+            {{ form.submit() }}
+            {{ form.cancel() }}
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   </div>
 </div>
 {% endblock %}
