@@ -13,7 +13,7 @@ import os
 from trainingdata.activity import Activity
 from .forms import ImportSummaryForm
 import sys
-from app.db import get_strava_db
+from app.db import get_strava_db, get_stl_db
 
 PER_PAGE = 20
 
@@ -34,6 +34,7 @@ def dashboard():
     page = request.args.get('page', 1, type=int)
     offset = (page - 1) * PER_PAGE
     strava_db = get_strava_db()
+    supertl2_db = get_stl_db()
 
     # Get total number of rows
     total = strava_db.execute("SELECT COUNT(*) FROM Activity").fetchone()[0]
@@ -45,7 +46,25 @@ def dashboard():
         (PER_PAGE, offset)
     ).fetchall()
     
-    return render_template("dashboard.html", activities=rows, page=page, total_pages=total_pages)
+    # Collect activityIds to check extras
+    activity_ids = [row["activityId"] for row in rows]
+
+    # Find which ones have extras
+    placeholders = ",".join("?" for _ in activity_ids)
+    extras = supertl2_db.execute(
+        f"SELECT activityId FROM Supertl2Extra WHERE activityId IN ({placeholders})",
+        activity_ids
+    ).fetchall()
+    extras_set = set(row["activityId"] for row in extras)
+
+    # Attach info to each row
+    activities = []
+    for row in rows:
+        activity = dict(row)
+        activity["has_extra"] = activity["activityId"] in extras_set
+        activities.append(activity)
+
+    return render_template("dashboard.html", activities=activities, page=page, total_pages=total_pages)
 
 
 @views.route("/calendar")

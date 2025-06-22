@@ -12,6 +12,7 @@
           <th>Name</th>
           <th>Distance</th>
           <th>Time</th>
+          <th>Extra?</th>
         </tr>
       </thead>
       {% for activity in activities %}
@@ -22,7 +23,13 @@
           <td>{{ activity.name }}</td>
           <td>{{ activity.distance }}</td>
           <td>{{ activity.movingTimeInSeconds | format_duration }}</td>
-      </tr>
+          <td>
+            {% if activity.has_extra %}
+              ✅
+            {% else %}
+              ❌
+            {% endif %}
+          </td>      </tr>
       {% endfor %}  
     </table>
     <div class="pagination">
