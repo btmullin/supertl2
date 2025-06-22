@@ -16,8 +16,8 @@
         </tr>
       </thead>
       {% for activity in activities %}
-      <tr>
-          <td>{{ activity.ActivityId }}</td>
+      <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId) }}'" style="cursor: pointer;">
+          <td>{{ activity.activityId }}</td>
           <td>{{ activity.startDateTime }}</td>
           <td>{{ activity.sportType }}</td>
           <td>{{ activity.name }}</td>
@@ -29,7 +29,8 @@
             {% else %}
               ❌
             {% endif %}
-          </td>      </tr>
+          </td>
+      </tr>
       {% endfor %}  
     </table>
     <div class="pagination">

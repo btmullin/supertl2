@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 import os
 from trainingdata.activity import Activity
 from .forms import ImportSummaryForm
+from .forms.EditExtraForm import EditExtraForm
 import sys
 from app.db import get_strava_db, get_stl_db
 
@@ -136,3 +137,80 @@ def import_summary():
 @views.route("/test")
 def test():
     return render_template("test.html")
+
+@views.route("/activity/edit", methods=["GET", "POST"])
+def edit_extra():
+    activity_id = request.args.get("id")
+    if not activity_id:
+        flash("Missing activity ID.")
+        return redirect(url_for("views.dashboard"))
+
+    form = EditExtraForm()
+
+    stl_db = get_stl_db()  # ✅ your function
+
+    # Populate select fields
+    form.workoutTypeId.choices = [(0, "—")] + [
+        (row["id"], row["name"])
+        for row in stl_db.execute("SELECT id, name FROM WorkoutType ORDER BY name").fetchall()
+    ]
+
+    form.categoryId.choices = [(0, "—")] + [
+        (row["id"], row["full_path"])
+        for row in stl_db.execute("""
+            WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
+                SELECT id, name, parent_id, name
+                FROM Category
+                WHERE parent_id IS NULL
+                UNION ALL
+                SELECT c.id, c.name, c.parent_id, cp.full_path || ' > ' || c.name
+                FROM Category c
+                JOIN category_path cp ON c.parent_id = cp.id
+            )
+            SELECT id, full_path FROM category_path
+            ORDER BY full_path
+        """).fetchall()
+    ]
+
+    if request.method == "GET":
+        form.activityId.data = activity_id
+        row = stl_db.execute(
+            "SELECT * FROM Supertl2Extra WHERE activityId = ?", (activity_id,)
+        ).fetchone()
+        if row:
+            form.workoutTypeId.data = row["workoutTypeId"] or 0
+            form.categoryId.data = row["categoryId"] or 0
+            form.notes.data = row["notes"]
+            form.tags.data = row["tags"]
+            form.isTraining.data = bool(row["isTraining"])
+        return render_template("edit_extra.html", form=form, activityId=activity_id)
+
+    if form.cancel.data:
+        return redirect(url_for("views.dashboard"))
+
+    if form.validate_on_submit():
+        workout_id = form.workoutTypeId.data or None
+        category_id = form.categoryId.data or None
+
+        stl_db.execute("""
+            INSERT INTO Supertl2Extra (activityId, workoutTypeId, categoryId, notes, tags, isTraining)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(activityId) DO UPDATE SET
+                workoutTypeId=excluded.workoutTypeId,
+                categoryId=excluded.categoryId,
+                notes=excluded.notes,
+                tags=excluded.tags,
+                isTraining=excluded.isTraining
+        """, (
+            activity_id,
+            workout_id,
+            category_id,
+            form.notes.data,
+            form.tags.data,
+            int(form.isTraining.data),
+        ))
+        stl_db.commit()
+        flash("Metadata updated.")
+        return redirect(url_for("views.dashboard"))
+
+    return render_template("edit_extra.html", form=form, activityId=activity_id)
