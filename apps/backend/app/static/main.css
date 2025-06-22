@@ -215,3 +215,58 @@ input[type="submit"], input[type="cancel"] {
   color: var(--theme-color-accent);
   font-weight: bold;
 }
+
+select, input[type="checkbox"] {
+  font-size: medium;
+  padding: 10px;
+  margin: 5px 0 15px 0;
+  border: 1px solid var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Improve spacing for form rows */
+form .form-group {
+  margin-bottom: 1.5em;
+}
+
+/* Fix label spacing */
+form label {
+  margin-top: 1em;
+}
+
+/* Make checkbox more visible */
+input[type="checkbox"] {
+  width: auto;
+  height: 20px;
+  transform: scale(1.3);
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+/* Group checkbox with label horizontally */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5em;
+}
+
+/* Smaller, modern-looking buttons */
+input[type="submit"], input[type="cancel"], button {
+  background-color: var(--theme-color-accent);
+  color: var(--theme-font-color);
+  padding: 8px 16px;
+  margin-right: 10px;
+  font-size: medium;
+  border: none;
+  border-radius: var(--theme-corner-radius);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+input[type="submit"]:hover,
+input[type="cancel"]:hover,
+button:hover {
+  background-color: var(--theme-color-primary);
+}
