@@ -6,7 +6,6 @@
     <table class="styled-table">
       <thead>
         <tr>
-          <th>ID</th>
           <th>Date/Time</th>
           <th>Sport</th>
           <th>Name</th>
@@ -17,8 +16,7 @@
       </thead>
       {% for activity in activities %}
       <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId) }}'" style="cursor: pointer;">
-          <td>{{ activity.activityId }}</td>
-          <td>{{ activity.startDateTime }}</td>
+          <td>{{ activity.startDateTime | pretty_datetime }}</td>
           <td>{{ activity.sportType }}</td>
           <td>{{ activity.name }}</td>
           <td>{{ activity.distance }}</td>
