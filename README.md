@@ -17,14 +17,22 @@ getting a training log going.
 
 ## Usage
 
-In PowerShell:
+### Setup/Basic Use
+
+To setup the Docker container, in PowerShell:
 ```
-docker build -t supertl2 .
-docker run --rm -d -p 5000:5000 -v c:\git\supertl2:/app --name supertl2 supertl2
+docker compose build
 ```
 
+To start the Docker container, in PowerShell:
+```
+docker compose up
+```
+
+### Opening The App
+
 From browser:
-[http://localhost:5000/supertl2](http://localhost:5000/supertl2)
+[http://localhost:5000/](http://localhost:5000/)
 
 ## Built With
 

@@ -1,0 +1,46 @@
+{% extends 'base.html' %} {% block content %}
+<div class="whole-body">
+  <div class="section" style="color: black">Summaries (weekly/monthly)</div>
+  <div class="section">
+    <h2>Recent Workouts</h2>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Date/Time</th>
+          <th>Sport</th>
+          <th>Name</th>
+          <th>Distance</th>
+          <th>Time</th>
+          <th>Extra?</th>
+        </tr>
+      </thead>
+      {% for activity in activities %}
+      <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId) }}'" style="cursor: pointer;">
+          <td>{{ activity.startDateTime | pretty_datetime }}</td>
+          <td>{{ activity.sportType }}</td>
+          <td>{{ activity.name }}</td>
+          <td>{{ activity.distance }}</td>
+          <td>{{ activity.movingTimeInSeconds | format_duration }}</td>
+          <td>
+            {% if activity.has_extra %}
+              ✅
+            {% else %}
+              ❌
+            {% endif %}
+          </td>
+      </tr>
+      {% endfor %}  
+    </table>
+    <div class="pagination">
+      {% if page > 1 %}
+        <a href="{{ url_for('views.dashboard', page=page-1) }}">Previous</a>
+      {% endif %}
+    
+      <span>Page {{ page }} of {{ total_pages }}</span>
+    
+      {% if page < total_pages %}
+        <a href="{{ url_for('views.dashboard', page=page+1) }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

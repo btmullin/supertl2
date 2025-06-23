@@ -15,11 +15,39 @@
   - [X] ~~*Create a training data class*~~ [2023-12-31]
   - [X] ~~*Where does it go and how does it actually process the file?*~~ [2024-01-01]
   - [X] ~~*Process fit file to produce summary*~~ [2024-01-01]
-  - [ ] Finish creating the selection of basic information for import
-  - [ ] Does this help any [Tutorial](https://flask.palletsprojects.com/en/2.3.x/tutorial/)
+  - [X] ~~*Finish creating the selection of basic information for import*~~ [2024-01-06]
+  - [X] ~~*Does this help any [Tutorial](https://flask.palletsprojects.com/en/2.3.x/tutorial/)*~~ [2024-01-06]
 - Start of a database
-  - [ ] When we click save on import screen... where does it go?
-  - [ ] Saving of summary information to database
+  - [X] ~~*When we click save on import screen... where does it go?*~~ [2024-01-06]
+- Finish Import
+  - [ ] Form for all fields in activity entry in database
+  - [ ] Does db initialization work correctly (only create if it doesn't already exist and doesn't empty it if it does)
+  - [ ] Save button action
+  - [ ] Cancel button action
+  - [ ] Move or delete file from upload
   - [ ] Move of the gps file to "cold storage"
-- How do we handle the actual application data and a configuration for test vs production?
+  - [ ] Saving of summary information to database
+- Import Cancel
+  - [ ] Figuring out the cancel button was not straight forward so skipped it [maybe this](https://stackoverflow.com/questions/63434291/add-a-cancel-button-in-flask-with-flask-wtf-wtforms)
+- Convert to bootstrap
+  - [ ] Nav bar
+  - [ ] Layout
+  - [ ] Forms
+- Category
+  - [X] Look patterns for doing heirarchical in a table
+  - [ ] Settings page
+  - [ ] Category edit settings page
+  - [ ] Add category to import
+- Means of mapping "settings" from db fields to code
+  - [ ] ie Pace type field for a category means speed or pace, but how does that value get mapped to the code and kept in sync
+- Workout Category
+  - [ ] rather than having the activity category define the workout type have a second field (or primary and secondary field) for workout type (zone, intervals, etc)
+- FUTURE
+  - [ ] Consider changing from sql queries to ORM
   - [ ] [Read This](https://medium.com/vteam/configure-docker-project-for-different-environments-using-docker-compose-3-bfbef37d951c)
+  - [ ] Handle "SECRET_KEY" more appropriately
+
+
+- New Starting 2025-06-15
+  - [ ] Convert to leveraging the DB created by [statistics-for-strava](https://github.com/robiningelbrecht/statistics-for-strava)
+  - [ ] 
