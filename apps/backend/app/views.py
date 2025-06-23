@@ -15,6 +15,7 @@ from .forms import ImportSummaryForm
 from .forms.EditExtraForm import EditExtraForm
 import sys
 from app.db import get_strava_db, get_stl_db
+import json
 
 PER_PAGE = 20
 
@@ -145,6 +146,14 @@ def edit_extra():
         flash("Missing activity ID.")
         return redirect(url_for("views.dashboard"))
 
+    strava_db = get_strava_db()
+    activity = strava_db.execute(
+        "SELECT * FROM Activity WHERE activityId = ?", (activity_id,)
+        ).fetchone()
+
+    activity_data = json.loads(activity["data"]) if activity and activity["data"] else {}
+    summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
+
     form = EditExtraForm()
 
     stl_db = get_stl_db()  # ✅ your function
@@ -183,7 +192,7 @@ def edit_extra():
             form.notes.data = row["notes"]
             form.tags.data = row["tags"]
             form.isTraining.data = bool(row["isTraining"])
-        return render_template("edit_extra.html", form=form, activityId=activity_id)
+        return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
         return redirect(url_for("views.dashboard"))
@@ -213,4 +222,4 @@ def edit_extra():
         flash("Metadata updated.")
         return redirect(url_for("views.dashboard"))
 
-    return render_template("edit_extra.html", form=form, activityId=activity_id)
+    return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)

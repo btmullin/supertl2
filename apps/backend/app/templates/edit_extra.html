@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- Load Leaflet first -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Then load the polyline plugin -->
+<script
+  src="https://cdn.jsdelivr.net/npm/polyline-encoded@0.0.9/Polyline.encoded.js"
+></script>
+
 <div class="whole-body">
   <div class="section">
     <h2>Edit Activity: {{ activityId }}</h2>
@@ -8,6 +17,9 @@
       <!-- Left: Strava Info -->
       <div style="flex: 1; min-width: 300px;">
         <h3>Strava Activity Info</h3>
+        <a href="https://www.strava.com/activities/{{ activity.activityId }}" target="_blank" rel="noopener">
+            View on Strava
+          </a>
         <table class="styled-table">
           <tbody>
             <tr><th>Start Time</th><td>{{ activity.startDateTime | pretty_datetime }}</td></tr>
@@ -22,9 +34,38 @@
             <tr><th>Description</th><td>{{ activity.description or "—" }}</td></tr>
           </tbody>
         </table>
-        <iframe height='405' width='590' frameborder='0' allowtransparency='true' scrolling='no'
-            src='https://www.strava.com/activities/{{ activity.activityId }}/embed/'>
-        </iframe>
+
+        {% if summary_polyline %}
+        <h4>Route Preview</h4>
+        <div id="map" style="height: 500px; margin-bottom: 1em; border-radius: 10px;"></div>
+
+        <script>
+          document.addEventListener("DOMContentLoaded", function () {
+            const encoded = {{ summary_polyline | tojson }};
+
+        
+            if (!encoded) {
+              console.warn("No polyline available.");
+              return;
+            }
+        
+            // Decode the polyline — returns a Leaflet Polyline
+            const polyline = L.Polyline.fromEncoded(encoded);
+        
+            const map = L.map("map");
+        
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+              maxZoom: 18,
+            }).addTo(map);
+        
+            polyline.addTo(map);
+            console.log(polyline.getLatLngs());
+            map.fitBounds(polyline.getBounds());
+          });
+        </script>
+        
+        {% endif %}
+
       </div>
 
       <!-- Right: Editable Fields -->
