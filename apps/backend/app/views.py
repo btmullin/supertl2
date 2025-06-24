@@ -147,6 +147,7 @@ def test():
 
 @views.route("/activity/edit", methods=["GET", "POST"])
 def edit_extra():
+    next_url = request.args.get("next") or url_for("views.dashboard")
     activity_id = request.args.get("id")
     if not activity_id:
         flash("Missing activity ID.")
@@ -201,7 +202,7 @@ def edit_extra():
         return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
-        return redirect(url_for("views.dashboard"))
+        return redirect(next_url)
 
     if form.validate_on_submit():
         workout_id = form.workoutTypeId.data or None
@@ -226,6 +227,6 @@ def edit_extra():
         ))
         stl_db.commit()
         flash("Metadata updated.")
-        return redirect(url_for("views.dashboard"))
+        return redirect(next_url)
 
     return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
