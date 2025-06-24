@@ -101,8 +101,9 @@ body {
 .section {
   border-color: var(--theme-color-primary);
   border-radius: var(--theme-corner-radius);
-  padding: 10px;
+  padding: 0px 10px;
   color: var(--content-font-color);
+  margin-bottom: 0em;
 }
 
 .footer {
@@ -185,7 +186,7 @@ input[type="submit"], input[type="cancel"] {
 
 .styled-table th, 
 .styled-table td {
-  padding: 12px 15px;
+  padding: 6px 10px;
   text-align: left;
 }
 
@@ -276,4 +277,70 @@ button:hover {
   border-radius: 10px;              /* match your theme's corner radius */
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);  /* soft drop shadow */
   margin-top: 10px;
+}
+
+.week-nav {
+  background-color: white;
+  color: var(--theme-content-font-color);
+  padding: 0.75em 1em;
+  margin-top: 1em;
+  border: 1px solid var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  display: flex;
+  align-items: center;
+  gap: 1.5em;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.week-nav a {
+  color: var(--theme-color-accent);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.week-nav a:hover {
+  text-decoration: underline;
+}
+
+.section h2 {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color);
+  padding: 0.5em 1em;
+  border-radius: var(--theme-corner-radius);
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+.styled-table th,
+.styled-table td {
+  border-right: 1px solid #ddd;  /* Light gray divider */
+}
+
+.col-date     { width: 150px; }
+.col-sport    { width: 100px; }
+/* .col-name     { width: 400px; } */
+.col-distance { width: 150px; }
+.col-time     { width: 150px; }
+.col-extra    { width: 100px; }
+
+.styled-table th.col-time,
+.styled-table th.col-distance,
+.styled-table td.col-time,
+.styled-table td.col-distance {
+  text-align: right;
+}
+
+.styled-table td.col-date {
+  font-weight: 500;
+}
+
+.styled-table td.col-distance-summary,
+.styled-table td.col-time-summary {
+  font-style: italic;
+  text-align: center;
+}
+
+.summary-row-border-header {
+  border-top: 5px double gray;
 }

@@ -16,6 +16,8 @@ from .forms.EditExtraForm import EditExtraForm
 import sys
 from app.db import get_strava_db, get_stl_db
 import json
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 PER_PAGE = 20
 
@@ -33,20 +35,23 @@ def allowed_file(filename):
 @views.route("/")
 @views.route("/dashboard")
 def dashboard():
-    page = request.args.get('page', 1, type=int)
-    offset = (page - 1) * PER_PAGE
+    week_offset = int(request.args.get("week_offset", 0))
+
+    # Calculate the current Monday (week starts)
+    today = datetime.today().date()
+    start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+    end_of_week = start_of_week + timedelta(days=6)
+    print(f"start_of_week: {start_of_week}, end_of_week: {end_of_week}", file=sys.stderr)
+
     strava_db = get_strava_db()
     supertl2_db = get_stl_db()
 
-    # Get total number of rows
-    total = strava_db.execute("SELECT COUNT(*) FROM Activity").fetchone()[0]
-    total_pages = (total + PER_PAGE - 1) // PER_PAGE
-    
-    # Fetch just the current page
-    rows = strava_db.execute(
-        "SELECT activityId, startDateTime, sportType, name, distance, movingTimeInSeconds FROM Activity ORDER BY startDateTime DESC LIMIT ? OFFSET ?",
-        (PER_PAGE, offset)
-    ).fetchall()
+    # Fetch just the current week
+    q = f"SELECT * FROM Activity WHERE date(startDateTime) BETWEEN {start_of_week.isoformat()} AND {end_of_week.isoformat()} ORDER BY startDateTime ASC"
+    print(f"SQL Query: {q}", file=sys.stderr)
+    rows = strava_db.execute("""
+        SELECT * FROM Activity WHERE date(startDateTime) BETWEEN ? AND ?
+        ORDER BY startDateTime ASC""", (start_of_week.isoformat(), end_of_week.isoformat())).fetchall()
     
     # Collect activityIds to check extras
     activity_ids = [row["activityId"] for row in rows]
@@ -66,7 +71,42 @@ def dashboard():
         activity["has_extra"] = activity["activityId"] in extras_set
         activities.append(activity)
 
-    return render_template("dashboard.html", activities=activities, page=page, total_pages=total_pages)
+    # Group activities by day of week
+    activities_by_day = defaultdict(list)
+    for a in activities:
+        day = datetime.fromisoformat(a["startDateTime"]).date()
+        activities_by_day[day].append(a)
+    days = [(start_of_week + timedelta(days=i)) for i in range(7)]
+
+    # Get daily summaries
+    daily_summaries = defaultdict(list)
+    for i,day in enumerate(days):
+        daily_summaries[day] = {
+            "total_distance": sum(
+                a["distance"] for a in activities_by_day[day] if a["distance"] is not None
+            ),
+            "total_duration": sum(
+                a["movingTimeInSeconds"] for a in activities_by_day[day] if a["movingTimeInSeconds"] is not None
+            ),
+        }
+
+    # Get this weeks summary
+    week_summary = {
+        "total_distance": sum(
+            daily_summaries[day]["total_distance"] for day in days
+        ),
+        "total_duration": sum(
+            daily_summaries[day]["total_duration"] for day in days
+        ),
+    }
+
+    return render_template("dashboard.html",
+                           start_of_week=start_of_week,
+                           week_offset=week_offset,
+                           activities_by_day=activities_by_day,
+                           days=days,
+                           daily_summaries=daily_summaries,
+                           week_summary=week_summary,)
 
 
 @views.route("/calendar")
@@ -141,6 +181,7 @@ def test():
 
 @views.route("/activity/edit", methods=["GET", "POST"])
 def edit_extra():
+    next_url = request.args.get("next") or url_for("views.dashboard")
     activity_id = request.args.get("id")
     if not activity_id:
         flash("Missing activity ID.")
@@ -195,7 +236,7 @@ def edit_extra():
         return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
-        return redirect(url_for("views.dashboard"))
+        return redirect(next_url)
 
     if form.validate_on_submit():
         workout_id = form.workoutTypeId.data or None
@@ -220,6 +261,6 @@ def edit_extra():
         ))
         stl_db.commit()
         flash("Metadata updated.")
-        return redirect(url_for("views.dashboard"))
+        return redirect(next_url)
 
     return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)

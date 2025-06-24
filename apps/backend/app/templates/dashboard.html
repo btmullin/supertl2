@@ -1,46 +1,75 @@
 {% extends 'base.html' %} {% block content %}
 <div class="whole-body">
-  <div class="section" style="color: black">Summaries (weekly/monthly)</div>
+  <!-- Navigation -->
+   <div class="section">
+  <div class="week-nav">
+    <span>
+      Week of {{ start_of_week.strftime('%B %d, %Y') }}
+    </span>
+    <a href="{{ url_for('views.dashboard', week_offset=week_offset - 1) }}">&laquo; Previous Week</a>
+    <a href="{{ url_for('views.dashboard', week_offset=week_offset + 1) }}">Next Week &raquo;</a>
+    <a href="{{ url_for('views.dashboard', week_offset=0) }}">Current Week</a>
+  </div>
+</div>
   <div class="section">
-    <h2>Recent Workouts</h2>
     <table class="styled-table">
       <thead>
         <tr>
-          <th>Date/Time</th>
-          <th>Sport</th>
-          <th>Name</th>
-          <th>Distance</th>
-          <th>Time</th>
+          <th class="col-date">Day/Time</th>
+          <th class="col-sport">Sport</th>
+          <th class="col-name">Name</th>
+          <th class="col-distance">Distance</th>
+          <th class="col-time">Time</th>
           <th>Extra?</th>
         </tr>
       </thead>
-      {% for activity in activities %}
-      <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId) }}'" style="cursor: pointer;">
-          <td>{{ activity.startDateTime | pretty_datetime }}</td>
-          <td>{{ activity.sportType }}</td>
-          <td>{{ activity.name }}</td>
-          <td>{{ activity.distance }}</td>
-          <td>{{ activity.movingTimeInSeconds | format_duration }}</td>
-          <td>
-            {% if activity.has_extra %}
-              ✅
-            {% else %}
-              ❌
-            {% endif %}
-          </td>
-      </tr>
-      {% endfor %}  
+      <tbody>
+        {% for day in days %}
+        {% set activities = activities_by_day.get(day, []) %}
+          {% if not activities %}
+            <!-- No activities just get the date -->
+            <tr>
+              <td class="col-date">{{ day.strftime('%A') }}</td>
+              <td colspan="5"></td>
+            </tr>
+            {% elif activities|length == 1 %}
+            {% set activity = activities[0] %}
+            <!-- A single activity goes on the same row as the date -->
+            <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
+              <td class="col-date">{{ day.strftime('%A') }}</td>
+              <td class="col-sport">{{ activity.sportType }}</td>
+              <td class="col-name">{{ activity.name }}</td>
+              <td class="col-distance">{{ activity.distance | km }}</td>
+              <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+              <td class="col-extra">{% if activity.has_extra %}✅{% else %}❌{% endif %}</td>
+            </tr>
+          {% else %}
+            <!-- Multiple activities, first row has day of week and daily summary, then each activity gets its own row with just the time -->
+            <tr>
+              <td class="col-date">{{ day.strftime('%A') }}</td>
+              <td colspan="2"></td>
+              <td class="col-distance-summary">{{ daily_summaries[day].total_distance | km }}</td>
+              <td class="col-time-summary">{{ daily_summaries[day].total_duration | format_duration }}</td>
+              <td class="col-extra"></td>
+            </tr>
+            {% for activity in activities %}
+            <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
+              <td style="text-align:right;">{{ activity.startDateTime | time_only }}</td>
+              <td class="col-sport">{{ activity.sportType }}</td>
+              <td class="col-name">{{ activity.name }}</td>
+              <td class="col-distance">{{ activity.distance | km }}</td>
+              <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+              <td class="col-extra">{% if activity.has_extra %}✅{% else %}❌{% endif %}</td>
+            </tr>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        <tr class="summary-row-border-header">
+          <td colspan="3">This week</td>
+          <td class="col-distance">{{ week_summary.total_distance | km }}</td>
+          <td class="col-time">{{ week_summary.total_duration | format_duration }}</td>
+        </tr>
+      </tbody> 
     </table>
-    <div class="pagination">
-      {% if page > 1 %}
-        <a href="{{ url_for('views.dashboard', page=page-1) }}">Previous</a>
-      {% endif %}
-    
-      <span>Page {{ page }} of {{ total_pages }}</span>
-    
-      {% if page < total_pages %}
-        <a href="{{ url_for('views.dashboard', page=page+1) }}">Next</a>
-      {% endif %}
-    </div>
   </div>
 {% endblock %}
