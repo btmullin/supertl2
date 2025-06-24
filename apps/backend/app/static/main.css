@@ -333,3 +333,9 @@ button:hover {
 .styled-table td.col-date {
   font-weight: bold;
 }
+
+.styled-table td.col-distance-summary,
+.styled-table td.col-time-summary {
+  font-style: italic;
+  text-align: center;
+}}

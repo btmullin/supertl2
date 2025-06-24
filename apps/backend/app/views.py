@@ -46,7 +46,7 @@ def dashboard():
     strava_db = get_strava_db()
     supertl2_db = get_stl_db()
 
-    # Fetch just the current page
+    # Fetch just the current week
     q = f"SELECT * FROM Activity WHERE date(startDateTime) BETWEEN {start_of_week.isoformat()} AND {end_of_week.isoformat()} ORDER BY startDateTime ASC"
     print(f"SQL Query: {q}", file=sys.stderr)
     rows = strava_db.execute("""
@@ -71,19 +71,31 @@ def dashboard():
         activity["has_extra"] = activity["activityId"] in extras_set
         activities.append(activity)
 
+    # Group activities by day of week
     activities_by_day = defaultdict(list)
     for a in activities:
         day = datetime.fromisoformat(a["startDateTime"]).date()
         activities_by_day[day].append(a)
-
-    print("start_of_week", type(start_of_week), file=sys.stderr)
     days = [(start_of_week + timedelta(days=i)) for i in range(7)]
+
+    # Get daily summaries
+    daily_summaries = defaultdict(list)
+    for i,day in enumerate(days):
+        daily_summaries[day] = {
+            "total_distance": sum(
+                a["distance"] for a in activities_by_day[day] if a["distance"] is not None
+            ),
+            "total_duration": sum(
+                a["movingTimeInSeconds"] for a in activities_by_day[day] if a["movingTimeInSeconds"] is not None
+            ),
+        }
 
     return render_template("dashboard.html",
                            start_of_week=start_of_week,
                            week_offset=week_offset,
                            activities_by_day=activities_by_day,
-                           days=days)
+                           days=days,
+                           daily_summaries=daily_summaries,)
 
 
 @views.route("/calendar")

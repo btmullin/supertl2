@@ -44,10 +44,13 @@
               <td class="col-extra">{% if activity.has_extra %}✅{% else %}❌{% endif %}</td>
             </tr>
           {% else %}
-            <!-- Multiple activities, first row has date only, then each activity gets its own row with just the time -->
+            <!-- Multiple activities, first row has day of week and daily summary, then each activity gets its own row with just the time -->
             <tr>
               <td class="col-date">{{ day.strftime('%A') }}</td>
-              <td colspan="5"></td>
+              <td colspan="2"></td>
+              <td class="col-distance-summary">{{ daily_summaries[day].total_distance | km }}</td>
+              <td class="col-time-summary">{{ daily_summaries[day].total_duration | format_duration }}</td>
+              <td class="col-extra"></td>
             </tr>
             {% for activity in activities %}
             <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
