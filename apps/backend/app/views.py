@@ -16,6 +16,7 @@ from .forms.EditExtraForm import EditExtraForm
 import sys
 from app.db import get_strava_db, get_stl_db
 import json
+from datetime import datetime, timedelta
 
 PER_PAGE = 20
 
@@ -33,20 +34,23 @@ def allowed_file(filename):
 @views.route("/")
 @views.route("/dashboard")
 def dashboard():
-    page = request.args.get('page', 1, type=int)
-    offset = (page - 1) * PER_PAGE
+    week_offset = int(request.args.get("week_offset", -1))
+
+    # Calculate the current Monday (week starts)
+    today = datetime.today().date()
+    start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+    end_of_week = start_of_week + timedelta(days=6)
+    print(f"start_of_week: {start_of_week}, end_of_week: {end_of_week}", file=sys.stderr)
+
     strava_db = get_strava_db()
     supertl2_db = get_stl_db()
 
-    # Get total number of rows
-    total = strava_db.execute("SELECT COUNT(*) FROM Activity").fetchone()[0]
-    total_pages = (total + PER_PAGE - 1) // PER_PAGE
-    
     # Fetch just the current page
-    rows = strava_db.execute(
-        "SELECT activityId, startDateTime, sportType, name, distance, movingTimeInSeconds FROM Activity ORDER BY startDateTime DESC LIMIT ? OFFSET ?",
-        (PER_PAGE, offset)
-    ).fetchall()
+    q = f"SELECT * FROM Activity WHERE date(startDateTime) BETWEEN {start_of_week.isoformat()} AND {end_of_week.isoformat()} ORDER BY startDateTime ASC"
+    print(f"SQL Query: {q}", file=sys.stderr)
+    rows = strava_db.execute("""
+        SELECT * FROM Activity WHERE date(startDateTime) BETWEEN ? AND ?
+        ORDER BY startDateTime ASC""", (start_of_week.isoformat(), end_of_week.isoformat())).fetchall()
     
     # Collect activityIds to check extras
     activity_ids = [row["activityId"] for row in rows]
@@ -66,7 +70,9 @@ def dashboard():
         activity["has_extra"] = activity["activityId"] in extras_set
         activities.append(activity)
 
-    return render_template("dashboard.html", activities=activities, page=page, total_pages=total_pages)
+    return render_template("dashboard.html", activities=activities,
+                           start_of_week=start_of_week,
+                           week_offset=week_offset)
 
 
 @views.route("/calendar")

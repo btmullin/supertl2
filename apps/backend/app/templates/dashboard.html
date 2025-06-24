@@ -1,5 +1,14 @@
 {% extends 'base.html' %} {% block content %}
 <div class="whole-body">
+  <!-- Navigation -->
+  <div class="week-nav">
+    <span>
+      Week of {{ start_of_week.strftime('%B %d, %Y') }}
+    </span>
+    <a href="{{ url_for('views.dashboard', week_offset=week_offset - 1) }}">&laquo; Previous Week</a>
+    <a href="{{ url_for('views.dashboard', week_offset=week_offset + 1) }}">Next Week &raquo;</a>
+    <a href="{{ url_for('views.dashboard', week_offset=0) }}">Current Week</a>
+  </div>
   <div class="section" style="color: black">Summaries (weekly/monthly)</div>
   <div class="section">
     <h2>Recent Workouts</h2>
@@ -31,16 +40,5 @@
       </tr>
       {% endfor %}  
     </table>
-    <div class="pagination">
-      {% if page > 1 %}
-        <a href="{{ url_for('views.dashboard', page=page-1) }}">Previous</a>
-      {% endif %}
-    
-      <span>Page {{ page }} of {{ total_pages }}</span>
-    
-      {% if page < total_pages %}
-        <a href="{{ url_for('views.dashboard', page=page+1) }}">Next</a>
-      {% endif %}
-    </div>
   </div>
 {% endblock %}

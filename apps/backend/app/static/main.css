@@ -277,3 +277,36 @@ button:hover {
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);  /* soft drop shadow */
   margin-top: 10px;
 }
+
+.week-nav {
+  background-color: white;
+  color: var(--theme-content-font-color);
+  padding: 0.75em 1em;
+  margin-top: 1em;
+  border: 1px solid var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  display: flex;
+  align-items: center;
+  gap: 1.5em;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.week-nav a {
+  color: var(--theme-color-accent);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.week-nav a:hover {
+  text-decoration: underline;
+}
+
+.section h2 {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color);
+  padding: 0.5em 1em;
+  border-radius: var(--theme-corner-radius);
+  margin-top: 0;
+  margin-bottom: 1em;
+}
