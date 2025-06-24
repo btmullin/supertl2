@@ -1,6 +1,7 @@
 {% extends 'base.html' %} {% block content %}
 <div class="whole-body">
   <!-- Navigation -->
+   <div class="section">
   <div class="week-nav">
     <span>
       Week of {{ start_of_week.strftime('%B %d, %Y') }}
@@ -9,9 +10,8 @@
     <a href="{{ url_for('views.dashboard', week_offset=week_offset + 1) }}">Next Week &raquo;</a>
     <a href="{{ url_for('views.dashboard', week_offset=0) }}">Current Week</a>
   </div>
-  <div class="section" style="color: black">Summaries (weekly/monthly)</div>
+</div>
   <div class="section">
-    <h2>Recent Workouts</h2>
     <table class="styled-table">
       <thead>
         <tr>
@@ -64,6 +64,11 @@
             {% endfor %}
           {% endif %}
         {% endfor %}
+        <tr class="summary-row-border-header">
+          <td colspan="3">This week</td>
+          <td class="col-distance">{{ week_summary.total_distance | km }}</td>
+          <td class="col-time">{{ week_summary.total_duration | format_duration }}</td>
+        </tr>
       </tbody> 
     </table>
   </div>

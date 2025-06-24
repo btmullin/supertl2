@@ -90,12 +90,23 @@ def dashboard():
             ),
         }
 
+    # Get this weeks summary
+    week_summary = {
+        "total_distance": sum(
+            daily_summaries[day]["total_distance"] for day in days
+        ),
+        "total_duration": sum(
+            daily_summaries[day]["total_duration"] for day in days
+        ),
+    }
+
     return render_template("dashboard.html",
                            start_of_week=start_of_week,
                            week_offset=week_offset,
                            activities_by_day=activities_by_day,
                            days=days,
-                           daily_summaries=daily_summaries,)
+                           daily_summaries=daily_summaries,
+                           week_summary=week_summary,)
 
 
 @views.route("/calendar")

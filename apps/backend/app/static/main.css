@@ -101,8 +101,9 @@ body {
 .section {
   border-color: var(--theme-color-primary);
   border-radius: var(--theme-corner-radius);
-  padding: 10px;
+  padding: 0px 10px;
   color: var(--content-font-color);
+  margin-bottom: 0em;
 }
 
 .footer {
@@ -185,7 +186,7 @@ input[type="submit"], input[type="cancel"] {
 
 .styled-table th, 
 .styled-table td {
-  padding: 12px 15px;
+  padding: 6px 10px;
   text-align: left;
 }
 
@@ -331,11 +332,15 @@ button:hover {
 }
 
 .styled-table td.col-date {
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .styled-table td.col-distance-summary,
 .styled-table td.col-time-summary {
   font-style: italic;
   text-align: center;
-}}
+}
+
+.summary-row-border-header {
+  border-top: 5px double gray;
+}
