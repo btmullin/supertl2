@@ -316,7 +316,7 @@ button:hover {
   border-right: 1px solid #ddd;  /* Light gray divider */
 }
 
-.col-date     { width: 250px; }
+.col-date     { width: 150px; }
 .col-sport    { width: 100px; }
 /* .col-name     { width: 400px; } */
 .col-distance { width: 150px; }
@@ -328,4 +328,8 @@ button:hover {
 .styled-table td.col-time,
 .styled-table td.col-distance {
   text-align: right;
+}
+
+.styled-table td.col-date {
+  font-weight: bold;
 }

@@ -15,7 +15,7 @@
     <table class="styled-table">
       <thead>
         <tr>
-          <th class="col-date">Date/Time</th>
+          <th class="col-date">Day/Time</th>
           <th class="col-sport">Sport</th>
           <th class="col-name">Name</th>
           <th class="col-distance">Distance</th>
@@ -23,22 +23,45 @@
           <th>Extra?</th>
         </tr>
       </thead>
-      {% for activity in activities %}
-      <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
-          <td class="col-date">{{ activity.startDateTime | pretty_datetime }}</td>
-          <td class="col-sport">{{ activity.sportType }}</td>
-          <td class="col-name">{{ activity.name }}</td>
-          <td class="col-distance">{{ activity.distance | km }}</td>
-          <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-          <td>
-            {% if activity.has_extra %}
-              ✅
-            {% else %}
-              ❌
-            {% endif %}
-          </td>
-      </tr>
-      {% endfor %}  
+      <tbody>
+        {% for day in days %}
+        {% set activities = activities_by_day.get(day, []) %}
+          {% if not activities %}
+            <!-- No activities just get the date -->
+            <tr>
+              <td class="col-date">{{ day.strftime('%A') }}</td>
+              <td colspan="5"></td>
+            </tr>
+            {% elif activities|length == 1 %}
+            {% set activity = activities[0] %}
+            <!-- A single activity goes on the same row as the date -->
+            <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
+              <td class="col-date">{{ day.strftime('%A') }}</td>
+              <td class="col-sport">{{ activity.sportType }}</td>
+              <td class="col-name">{{ activity.name }}</td>
+              <td class="col-distance">{{ activity.distance | km }}</td>
+              <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+              <td class="col-extra">{% if activity.has_extra %}✅{% else %}❌{% endif %}</td>
+            </tr>
+          {% else %}
+            <!-- Multiple activities, first row has date only, then each activity gets its own row with just the time -->
+            <tr>
+              <td class="col-date">{{ day.strftime('%A') }}</td>
+              <td colspan="5"></td>
+            </tr>
+            {% for activity in activities %}
+            <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
+              <td style="text-align:right;">{{ activity.startDateTime | time_only }}</td>
+              <td class="col-sport">{{ activity.sportType }}</td>
+              <td class="col-name">{{ activity.name }}</td>
+              <td class="col-distance">{{ activity.distance | km }}</td>
+              <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+              <td class="col-extra">{% if activity.has_extra %}✅{% else %}❌{% endif %}</td>
+            </tr>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </tbody> 
     </table>
   </div>
 {% endblock %}

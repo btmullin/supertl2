@@ -16,6 +16,13 @@ def format_datetime_pretty(value):
     except Exception:
         return value  # Fallback if something goes wrong
 
+def format_timeonly(value):
+    try:
+        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        return dt.strftime("%-I:%M %p")  # e.g., Jun 19, 2025 09:01 PM
+    except Exception:
+        return value  # Fallback if something goes wrong
+    
 def format_kilometers(meters):
     try:
         if meters == 0:
@@ -29,3 +36,4 @@ def register_filters(app):
     app.jinja_env.filters['format_duration'] = format_duration
     app.jinja_env.filters["pretty_datetime"] = format_datetime_pretty
     app.jinja_env.filters["km"] = format_kilometers
+    app.jinja_env.filters["time_only"] = format_timeonly

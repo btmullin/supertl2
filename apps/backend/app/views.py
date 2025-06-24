@@ -17,6 +17,7 @@ import sys
 from app.db import get_strava_db, get_stl_db
 import json
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 PER_PAGE = 20
 
@@ -34,7 +35,7 @@ def allowed_file(filename):
 @views.route("/")
 @views.route("/dashboard")
 def dashboard():
-    week_offset = int(request.args.get("week_offset", -1))
+    week_offset = int(request.args.get("week_offset", 0))
 
     # Calculate the current Monday (week starts)
     today = datetime.today().date()
@@ -70,9 +71,19 @@ def dashboard():
         activity["has_extra"] = activity["activityId"] in extras_set
         activities.append(activity)
 
-    return render_template("dashboard.html", activities=activities,
+    activities_by_day = defaultdict(list)
+    for a in activities:
+        day = datetime.fromisoformat(a["startDateTime"]).date()
+        activities_by_day[day].append(a)
+
+    print("start_of_week", type(start_of_week), file=sys.stderr)
+    days = [(start_of_week + timedelta(days=i)) for i in range(7)]
+
+    return render_template("dashboard.html",
                            start_of_week=start_of_week,
-                           week_offset=week_offset)
+                           week_offset=week_offset,
+                           activities_by_day=activities_by_day,
+                           days=days)
 
 
 @views.route("/calendar")
