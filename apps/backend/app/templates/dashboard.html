@@ -15,21 +15,21 @@
     <table class="styled-table">
       <thead>
         <tr>
-          <th>Date/Time</th>
-          <th>Sport</th>
-          <th>Name</th>
-          <th>Distance</th>
-          <th>Time</th>
+          <th class="col-date">Date/Time</th>
+          <th class="col-sport">Sport</th>
+          <th class="col-name">Name</th>
+          <th class="col-distance">Distance</th>
+          <th class="col-time">Time</th>
           <th>Extra?</th>
         </tr>
       </thead>
       {% for activity in activities %}
       <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
-          <td>{{ activity.startDateTime | pretty_datetime }}</td>
-          <td>{{ activity.sportType }}</td>
-          <td>{{ activity.name }}</td>
-          <td>{{ activity.distance }}</td>
-          <td>{{ activity.movingTimeInSeconds | format_duration }}</td>
+          <td class="col-date">{{ activity.startDateTime | pretty_datetime }}</td>
+          <td class="col-sport">{{ activity.sportType }}</td>
+          <td class="col-name">{{ activity.name }}</td>
+          <td class="col-distance">{{ activity.distance | km }}</td>
+          <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
           <td>
             {% if activity.has_extra %}
               ✅

@@ -310,3 +310,22 @@ button:hover {
   margin-top: 0;
   margin-bottom: 1em;
 }
+
+.styled-table th,
+.styled-table td {
+  border-right: 1px solid #ddd;  /* Light gray divider */
+}
+
+.col-date     { width: 250px; }
+.col-sport    { width: 100px; }
+/* .col-name     { width: 400px; } */
+.col-distance { width: 150px; }
+.col-time     { width: 150px; }
+.col-extra    { width: 100px; }
+
+.styled-table th.col-time,
+.styled-table th.col-distance,
+.styled-table td.col-time,
+.styled-table td.col-distance {
+  text-align: right;
+}
