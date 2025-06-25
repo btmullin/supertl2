@@ -10,7 +10,7 @@ CREATE TABLE Supertl2Extra (
     categoryId INTEGER,              -- optional, FK to Category
     notes TEXT,                      -- optional freeform
     tags TEXT,                       -- comma-separated tags or JSON
-    isTraining INTEGER DEFAULT 1,    -- boolean flag (0/1)
+    isTraining INTEGER DEFAULT 2,    -- tri-state flag (0 - no/1 - yes/2 - unknown)
     
     FOREIGN KEY (workoutTypeId) REFERENCES WorkoutType(id)
     FOREIGN KEY (categoryId) REFERENCES Category(id)
