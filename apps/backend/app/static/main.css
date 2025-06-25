@@ -1,17 +1,17 @@
 :root {
-  --theme-background-color: whitesmoke;
-  --theme-color-primary: rgb(150, 150, 255);
-  --theme-color-accent: rgb(61, 116, 224);
-  --theme-corner-radius: 15px;
-  --theme-font-color: rgb(253, 238, 238);
-  --theme-content-font-color: black;
+  --theme-background-color: #f0f4f8;
+  --theme-color-primary: #00bcd4;
+  --theme-color-accent: #003f5c;
+  --theme-corner-radius: 12px;
+  --theme-font-color: white;
+  --theme-content-font-color: #1c1c1e;
 }
 
 html,
 body {
   height: 100%;
   background-color: var(--theme-background-color);
-  color: red;
+  color: var(--theme-content-font-color); /* changed from red */
 }
 
 .large-text {
@@ -41,26 +41,76 @@ body {
 .title-bar {
   grid-column: 1/-1;
   grid-row: 1/2;
-  background-color: var(--theme-color-primary);
+  background-color: white; /* blend into page */
+  border: 1px solid var(--theme-color-primary);
+  box-shadow: 0 2px 4px rgba(0, 188, 212, 0.2);
   border-radius: var(--theme-corner-radius);
-  padding-bottom: 5px;
-  display: grid;
+  padding: 0.5em 1em;
+  display: flex;
   align-items: center;
-  color: var(--theme-font-color);
+  color: var(--theme-content-font-color);
 }
 
 .title-bar h1 {
-  margin: 0%;
-  padding-left: 0.5em;
+  margin: 0;
+  font-size: 1.8em;
+  color: var(--theme-color-accent); /* deep navy */
 }
 
 .menu-bar {
   grid-column: 1/-1;
   grid-row: 2/3;
-  background-color: var(--theme-color-primary);
+  background: white;
+  border: 1px solid var(--theme-color-primary);
+  box-shadow: 0 1px 3px rgba(0, 188, 212, 0.1);
   border-radius: var(--theme-corner-radius);
-  padding: 0px;
+  padding: 0.5em 1em;
 }
+
+.nav-tabs {
+  display: flex;
+  gap: 1em;
+  border: none;
+  padding: 0.5em 0;
+  background: transparent;  /* <-- add this */
+}
+
+.nav-tabs .nav-link {
+  font-size: 1em;
+  color: var(--theme-color-accent) !important;
+  background-color: transparent;
+  border: none;
+  padding: 0.4em 0.8em;
+  border-radius: var(--theme-corner-radius);
+  transition: background-color 0.2s, color 0.2s;
+  position: relative;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background-color: #a9eeff;
+}
+
+/* .nav-tabs .nav-link:hover::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--theme-color-accent);
+} */
+
+.nav-tabs .nav-link.active {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color) !important;
+  border-radius: var(--theme-corner-radius);
+}
+
+/* Optional: Improve link hover globally */
+/* a.nav-link:hover {
+  text-decoration: underline;
+} */
 
 .left-body {
   grid-column: 1/3;
@@ -118,21 +168,6 @@ body {
 
 .footer p {
   margin: 0em;
-}
-
-.nav-tabs {
-  border-radius: var(--theme-corner-radius);
-}
-
-.nav-tabs .nav-link {
-  border-top-left-radius: var(--theme-corner-radius);
-  border-top-right-radius: var(--theme-corner-radius);
-  border-radius: var(--theme-corner-radius);
-  font-size: 20px;
-}
-
-a.nav-link {
-  color: var(--theme-font-color) !important;
 }
 
 input[type="text"], input[type="email"], input[type="number"], textarea {
@@ -339,6 +374,7 @@ button:hover {
 .styled-table td.col-time-summary {
   font-style: italic;
   text-align: center;
+  font-size: 14px;
 }
 
 .summary-row-border-header {
