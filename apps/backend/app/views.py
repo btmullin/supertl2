@@ -232,7 +232,7 @@ def edit_extra():
             form.categoryId.data = row["categoryId"] or 0
             form.notes.data = row["notes"]
             form.tags.data = row["tags"]
-            form.isTraining.data = bool(row["isTraining"])
+            form.isTraining.data = row["isTraining"] if row["isTraining"] is not None else 2
         return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
@@ -257,7 +257,7 @@ def edit_extra():
             category_id,
             form.notes.data,
             form.tags.data,
-            int(form.isTraining.data),
+            form.isTraining.data,
         ))
         stl_db.commit()
         flash("Metadata updated.")

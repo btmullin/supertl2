@@ -93,11 +93,9 @@
             {{ form.tags() }}
           </div>
 
-          <div class="checkbox-wrapper">
+          <div class="form-group">
+            <label>{{ form.isTraining.label }}</label>
             {{ form.isTraining() }}
-            <label style="background: none; color: black; font-size: 1em; margin: 0;">
-              {{ form.isTraining.label.text }}
-            </label>
           </div>
 
           <div>

@@ -10,7 +10,16 @@ class EditExtraForm(FlaskForm):
 
     notes = TextAreaField("Notes", validators=[Optional()])
     tags = StringField("Tags", validators=[Optional()])
-    isTraining = BooleanField("Is Training?")
+    isTraining = SelectField(
+        "Is Training?",
+        coerce=int,
+        choices=[
+            (2, "Unknown"),
+            (1, "Yes"),
+            (0, "No"),
+        ],
+        validators=[Optional()],
+    )
 
     submit = SubmitField("Save")
     cancel = SubmitField("Cancel")
