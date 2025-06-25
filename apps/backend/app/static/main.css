@@ -1,11 +1,20 @@
 :root {
-  --theme-background-color: #f0f4f8;
-  --theme-color-primary: #00bcd4;
-  --theme-color-accent: #003f5c;
-  --theme-corner-radius: 12px;
+  /* Base Theme */
+  --theme-background-color: #f0f4f8;      /* Light grayish blue */
+  --theme-color-primary: #00bcd4;         /* Teal (Material Design "Cyan 500") */
+  --theme-color-accent: #003f5c;          /* Deep navy */
   --theme-font-color: white;
-  --theme-content-font-color: #1c1c1e;
+  --theme-content-font-color: #1c1c1e;    /* Near-black */
+
+  /* Light Variants */
+  --theme-color-primary-light: #e0f7fa;   /* Light teal (Cyan 50) */
+  --theme-color-accent-light: #ccdbe3;    /* Muted blue-gray */
+  --theme-background-color-light: #ffffff;/* Pure white fallback */
+
+  /* Corner Radius */
+  --theme-corner-radius: 12px;
 }
+
 
 html,
 body {
@@ -72,7 +81,7 @@ body {
   gap: 1em;
   border: none;
   padding: 0.5em 0;
-  background: transparent;  /* <-- add this */
+  background: transparent;
 }
 
 .nav-tabs .nav-link {
@@ -88,7 +97,7 @@ body {
 }
 
 .nav-link:hover {
-  background-color: #a9eeff;
+  background-color: var(--theme-color-primary-light);
 }
 
 /* .nav-tabs .nav-link:hover::after {
