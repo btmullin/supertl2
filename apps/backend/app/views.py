@@ -213,7 +213,7 @@ def edit_extra():
                 FROM Category
                 WHERE parent_id IS NULL
                 UNION ALL
-                SELECT c.id, c.name, c.parent_id, cp.full_path || ' > ' || c.name
+                SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
                 FROM Category c
                 JOIN category_path cp ON c.parent_id = cp.id
             )
