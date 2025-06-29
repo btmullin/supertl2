@@ -8,6 +8,7 @@ services:
       - "5000:5000"
     volumes:
       - ./db:/db           # ✅ bind mount for persistent, inspectable DB
+      - ../../statsforstrava/storage/database:/stravadb
       - .:/app                 # Mount your source code into the container
     environment:
       FLASK_ENV: development   # Enables debug mode and auto-reload
