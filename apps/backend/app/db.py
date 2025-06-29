@@ -25,7 +25,6 @@ def close_dbs(e=None):
 
 def initialize_dbs():
     """Initialize all of the DBs for the app if they doesn't exist."""
-    init_sqlite_db(path=STRAVA_DB)
     init_sqlite_db(path=STL_DB)
 
 def init_sqlite_db(path):
