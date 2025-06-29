@@ -13,13 +13,6 @@ def get_stl_db():
         g.db.row_factory = sqlite3.Row
     return g.db
 
-def get_strava_db():
-    """Get the db for the strava imports."""
-    if 'strava_db' not in g:
-        g.strava_db = sqlite3.connect(STRAVA_DB)
-        g.strava_db.row_factory = sqlite3.Row
-    return g.strava_db
-
 def close_dbs(e=None):
     """Close all of the databases."""
     db = g.pop('stl_db', None)

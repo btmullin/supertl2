@@ -14,7 +14,7 @@ from trainingdata.activity import Activity
 from .forms import ImportSummaryForm
 from .forms.EditExtraForm import EditExtraForm
 import sys
-from app.db import get_strava_db, get_stl_db
+from app.db import get_stl_db, import_strava_data
 import json
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -43,14 +43,11 @@ def dashboard():
     end_of_week = start_of_week + timedelta(days=6)
     print(f"start_of_week: {start_of_week}, end_of_week: {end_of_week}", file=sys.stderr)
 
-    strava_db = get_strava_db()
     supertl2_db = get_stl_db()
 
     # Fetch just the current week
-    q = f"SELECT * FROM Activity WHERE date(startDateTime) BETWEEN {start_of_week.isoformat()} AND {end_of_week.isoformat()} ORDER BY startDateTime ASC"
-    print(f"SQL Query: {q}", file=sys.stderr)
-    rows = strava_db.execute("""
-        SELECT * FROM Activity WHERE date(startDateTime) BETWEEN ? AND ?
+    rows = supertl2_db.execute("""
+        SELECT * FROM StravaActivity WHERE date(startDateTime) BETWEEN ? AND ?
         ORDER BY startDateTime ASC""", (start_of_week.isoformat(), end_of_week.isoformat())).fetchall()
     
     # Collect activityIds to check extras
@@ -187,17 +184,16 @@ def edit_extra():
         flash("Missing activity ID.")
         return redirect(url_for("views.dashboard"))
 
-    strava_db = get_strava_db()
-    activity = strava_db.execute(
-        "SELECT * FROM Activity WHERE activityId = ?", (activity_id,)
+    stl_db = get_stl_db()
+
+    activity = stl_db.execute(
+        "SELECT * FROM StravaActivity WHERE activityId = ?", (activity_id,)
         ).fetchone()
 
     activity_data = json.loads(activity["data"]) if activity and activity["data"] else {}
     summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
 
     form = EditExtraForm()
-
-    stl_db = get_stl_db()  # ✅ your function
 
     # Populate select fields
     form.workoutTypeId.choices = [(0, "—")] + [
@@ -264,3 +260,10 @@ def edit_extra():
         return redirect(next_url)
 
     return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+
+@views.route("/admin/import-strava")
+def import_strava():
+    import_strava_data()
+
+    flash(f"Imported new activities.")
+    return redirect(url_for("views.dashboard"))
