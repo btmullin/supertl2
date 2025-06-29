@@ -14,6 +14,7 @@ INSERT INTO Category(name, parent_id) VALUES('Road', 9);
 INSERT INTO Category(name, parent_id) VALUES('Gravel', 9);
 INSERT INTO Category(name, parent_id) VALUES('Mountain', 9);
 INSERT INTO Category(name, parent_id) VALUES('Strength', null);
+INSERT INTO Category(name, parent_id) VALUES('SkiErg', 1);
 
 -- Initialize WorkoutType table
 INSERT INTO WorkoutType(name, description) VALUES('General', 'General endurance workout');
