@@ -4,7 +4,7 @@ from flask import g
 import os
 
 STL_DB = '/app/db/supertl2.db'
-STRAVA_DB = '/app/db/strava.db'
+STRAVA_DB = '/stravadb/strava.db'
 
 def get_stl_db():
     """Get the db for the stl app data."""
@@ -12,13 +12,6 @@ def get_stl_db():
         g.db = sqlite3.connect(STL_DB)
         g.db.row_factory = sqlite3.Row
     return g.db
-
-def get_strava_db():
-    """Get the db for the strava imports."""
-    if 'strava_db' not in g:
-        g.strava_db = sqlite3.connect(STRAVA_DB)
-        g.strava_db.row_factory = sqlite3.Row
-    return g.strava_db
 
 def close_dbs(e=None):
     """Close all of the databases."""
@@ -32,7 +25,6 @@ def close_dbs(e=None):
 
 def initialize_dbs():
     """Initialize all of the DBs for the app if they doesn't exist."""
-    init_sqlite_db(path=STRAVA_DB)
     init_sqlite_db(path=STL_DB)
 
 def init_sqlite_db(path):
@@ -68,3 +60,32 @@ def init_sqlite_db(path):
         print(f"✅ Initialized {base}.db")
     else:
         print(f"✔️ DB already exists: {path}")
+
+def import_strava_data():
+    """Import new Strava activities into the Supertl2Extra table."""
+    supertl_db = get_stl_db()
+
+    stl_cursor = supertl_db.cursor()
+
+    # Attach the Strava database under the alias "strava"
+    stl_cursor.execute(f"ATTACH DATABASE '{STRAVA_DB}' AS strava")
+
+    # Print which activities are new
+    stl_cursor.execute("""
+                       SELECT name, activityId FROM strava.Activity WHERE activityId NOT IN (SELECT activityId FROM StravaActivity)
+                       """)
+    new_activities = stl_cursor.fetchall()
+    print(f"Found {len(new_activities)} new activities to import.")
+    for activity in new_activities:
+        print(f"Importing new activity: {activity['name']}")
+
+
+    # Insert activities that don't exist yet in supertl
+    stl_cursor.execute("""
+        INSERT INTO StravaActivity
+        SELECT *
+        FROM strava.Activity
+        WHERE activityId NOT IN (SELECT activityId FROM StravaActivity)
+    """)
+
+    supertl_db.commit()

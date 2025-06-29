@@ -8,6 +8,9 @@ hardware/**/fp-info-cache
 # Python cache
 __pycache__
 
+# Python venv
+.venv
+
 # Uploaded files
 uploads
 
