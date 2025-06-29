@@ -1,6 +1,9 @@
+"""Primary views of the flask application."""
+
+import os
+import sys
 from flask import (
     Blueprint,
-    jsonify,
     render_template,
     request,
     url_for,
@@ -9,11 +12,9 @@ from flask import (
     flash,
 )
 from werkzeug.utils import secure_filename
-import os
 from trainingdata.activity import Activity
 from .forms import ImportSummaryForm
 from .forms.EditExtraForm import EditExtraForm
-import sys
 from app.db import get_stl_db, import_strava_data
 import json
 from datetime import datetime, timedelta
@@ -25,6 +26,7 @@ views = Blueprint("views", __name__)
 
 
 def allowed_file(filename):
+    """Check if the file has an allowed extension."""
     return (
         "." in filename
         and filename.rsplit(".", 1)[1].lower()
