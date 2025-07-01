@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, JSON
 from sqlalchemy.orm import relationship
 
 from ..db.base import BaseModel
@@ -14,5 +14,6 @@ class StravaActivity(BaseModel):
     movingTimeInSeconds = Column(Integer)
     description = Column(String)
     elevation = Column(Integer)
+    data = Column(JSON)
 
     training_log = relationship("TrainingLogData", back_populates="strava_activity", uselist=False)
