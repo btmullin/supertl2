@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS Category;
 DROP TABLE IF EXISTS StravaActivity;
 
 -- Main table with logical FK to Strava activity and workout type
-CREATE TABLE TrainingData (
+CREATE TABLE TrainingLogData (
     activityId TEXT PRIMARY KEY,     -- matches strava.Activity.activityId
     workoutTypeId INTEGER,           -- optional, maps to WorkoutType.id
     categoryId INTEGER,              -- optional, FK to Category
