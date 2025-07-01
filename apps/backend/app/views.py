@@ -2,6 +2,9 @@
 
 import os
 import sys
+import json
+from datetime import datetime, timedelta
+from collections import defaultdict
 from flask import (
     Blueprint,
     render_template,
@@ -13,17 +16,16 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from trainingdata.activity import Activity
+from sqlalchemy import func
+from app.db.db import import_strava_data
 from .forms import ImportSummaryForm
 from .forms.EditExtraForm import EditExtraForm
-from app.db import get_stl_db, import_strava_data
-import json
-from datetime import datetime, timedelta
-from collections import defaultdict
+from .models import StravaActivity
+from .db.base import sqla_db
 
 PER_PAGE = 20
 
 views = Blueprint("views", __name__)
-
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""
@@ -33,80 +35,71 @@ def allowed_file(filename):
         in current_app.config["ALLOWED_EXTENSIONS"]
     )
 
+def get_dashboard_context(week_offset=0):
+    today = datetime.today().date()
+    start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+    end_of_week = start_of_week + timedelta(days=6)
+
+    # Fetch activities in date range
+    activities = (
+        sqla_db.session.query(StravaActivity)
+        .filter(func.date(StravaActivity.startDateTime).between(start_of_week, end_of_week))
+        .order_by(StravaActivity.startDateTime)
+        .all()
+    )
+
+    # Organize and annotate
+    activities_by_day = defaultdict(list)
+    activities_data = []
+    for a in activities:
+        day = a.startDateTime.date()
+        activity_dict = {
+            "activityId": a.activityId,
+            "startDateTime": a.startDateTime,
+            "sportType": a.sportType,
+            "name": a.name,
+            "distance": a.distance,
+            "movingTimeInSeconds": a.movingTimeInSeconds,
+            "has_extra": a.training_log is not None,
+        }
+        activities_by_day[day].append(activity_dict)
+        activities_data.append(activity_dict)
+
+    days = [start_of_week + timedelta(days=i) for i in range(7)]
+
+    daily_summaries = {
+        day: {
+            "total_distance": sum(a["distance"] for a in activities_by_day[day] if a["distance"] is not None),
+            "total_duration": sum(a["movingTimeInSeconds"] for a in activities_by_day[day] if a["movingTimeInSeconds"] is not None),
+        }
+        for day in days
+    }
+
+    week_summary = {
+        "total_distance": sum(d["total_distance"] for d in daily_summaries.values()),
+        "total_duration": sum(d["total_duration"] for d in daily_summaries.values()),
+    }
+
+    return {
+        "start_of_week": start_of_week,
+        "end_of_week": end_of_week,
+        "activities_by_day": activities_by_day,
+        "daily_summaries": daily_summaries,
+        "week_summary": week_summary,
+        "days": days,
+        "week_offset": week_offset,
+    }
 
 @views.route("/")
 @views.route("/dashboard")
 def dashboard():
     week_offset = int(request.args.get("week_offset", 0))
 
-    # Calculate the current Monday (week starts)
-    today = datetime.today().date()
-    start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
-    end_of_week = start_of_week + timedelta(days=6)
-    print(f"start_of_week: {start_of_week}, end_of_week: {end_of_week}", file=sys.stderr)
-
-    supertl2_db = get_stl_db()
-
-    # Fetch just the current week
-    rows = supertl2_db.execute("""
-        SELECT * FROM StravaActivity WHERE date(startDateTime) BETWEEN ? AND ?
-        ORDER BY startDateTime ASC""", (start_of_week.isoformat(), end_of_week.isoformat())).fetchall()
-    
-    # Collect activityIds to check extras
-    activity_ids = [row["activityId"] for row in rows]
-
-    # Find which ones have extras
-    placeholders = ",".join("?" for _ in activity_ids)
-    extras = supertl2_db.execute(
-        f"SELECT activityId FROM Supertl2Extra WHERE activityId IN ({placeholders})",
-        activity_ids
-    ).fetchall()
-    extras_set = set(row["activityId"] for row in extras)
-
-    # Attach info to each row
-    activities = []
-    for row in rows:
-        activity = dict(row)
-        activity["has_extra"] = activity["activityId"] in extras_set
-        activities.append(activity)
-
-    # Group activities by day of week
-    activities_by_day = defaultdict(list)
-    for a in activities:
-        day = datetime.fromisoformat(a["startDateTime"]).date()
-        activities_by_day[day].append(a)
-    days = [(start_of_week + timedelta(days=i)) for i in range(7)]
-
-    # Get daily summaries
-    daily_summaries = defaultdict(list)
-    for i,day in enumerate(days):
-        daily_summaries[day] = {
-            "total_distance": sum(
-                a["distance"] for a in activities_by_day[day] if a["distance"] is not None
-            ),
-            "total_duration": sum(
-                a["movingTimeInSeconds"] for a in activities_by_day[day] if a["movingTimeInSeconds"] is not None
-            ),
-        }
-
-    # Get this weeks summary
-    week_summary = {
-        "total_distance": sum(
-            daily_summaries[day]["total_distance"] for day in days
-        ),
-        "total_duration": sum(
-            daily_summaries[day]["total_duration"] for day in days
-        ),
-    }
-
-    return render_template("dashboard.html",
-                           start_of_week=start_of_week,
-                           week_offset=week_offset,
-                           activities_by_day=activities_by_day,
-                           days=days,
-                           daily_summaries=daily_summaries,
-                           week_summary=week_summary,)
-
+    context = get_dashboard_context(week_offset)
+    return render_template(
+        "dashboard.html",
+        **context
+    )
 
 @views.route("/calendar")
 def calendar():
