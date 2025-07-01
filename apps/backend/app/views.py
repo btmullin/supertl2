@@ -16,11 +16,11 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from trainingdata.activity import Activity
-from sqlalchemy import func
+from sqlalchemy import func, text
 from app.db.db import import_strava_data
 from .forms import ImportSummaryForm
 from .forms.EditExtraForm import EditExtraForm
-from .models import StravaActivity
+from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
 
 PER_PAGE = 20
@@ -179,51 +179,46 @@ def edit_extra():
         flash("Missing activity ID.")
         return redirect(url_for("views.dashboard"))
 
-    stl_db = get_stl_db()
+    activity = sqla_db.session.get(StravaActivity, activity_id)
+    if not activity:
+        flash("Activity not found.")
+        return redirect(next_url)
 
-    activity = stl_db.execute(
-        "SELECT * FROM StravaActivity WHERE activityId = ?", (activity_id,)
-        ).fetchone()
-
-    activity_data = json.loads(activity["data"]) if activity and activity["data"] else {}
+    activity_data = activity.data or {}
     summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
 
     form = EditExtraForm()
 
     # Populate select fields
     form.workoutTypeId.choices = [(0, "—")] + [
-        (row["id"], row["name"])
-        for row in stl_db.execute("SELECT id, name FROM WorkoutType ORDER BY name").fetchall()
+        (w.id, w.name) for w in sqla_db.session.query(WorkoutType).order_by(WorkoutType.name).all()
     ]
 
-    form.categoryId.choices = [(0, "—")] + [
-        (row["id"], row["full_path"])
-        for row in stl_db.execute("""
-            WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
-                SELECT id, name, parent_id, name
-                FROM Category
-                WHERE parent_id IS NULL
-                UNION ALL
-                SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
-                FROM Category c
-                JOIN category_path cp ON c.parent_id = cp.id
-            )
-            SELECT id, full_path FROM category_path
-            ORDER BY full_path
-        """).fetchall()
-    ]
+    # Recursive category path query
+    category_paths = sqla_db.session.execute(text("""
+        WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
+            SELECT id, name, parent_id, name
+            FROM Category
+            WHERE parent_id IS NULL
+            UNION ALL
+            SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
+            FROM Category c
+            JOIN category_path cp ON c.parent_id = cp.id
+        )
+        SELECT id, full_path FROM category_path
+        ORDER BY full_path
+    """)).fetchall()
+    form.categoryId.choices = [(0, "—")] + [(row.id, row.full_path) for row in category_paths]
 
     if request.method == "GET":
         form.activityId.data = activity_id
-        row = stl_db.execute(
-            "SELECT * FROM Supertl2Extra WHERE activityId = ?", (activity_id,)
-        ).fetchone()
-        if row:
-            form.workoutTypeId.data = row["workoutTypeId"] or 0
-            form.categoryId.data = row["categoryId"] or 0
-            form.notes.data = row["notes"]
-            form.tags.data = row["tags"]
-            form.isTraining.data = row["isTraining"] if row["isTraining"] is not None else 2
+        existing = sqla_db.session.get(TrainingLogData, activity_id)
+        if existing:
+            form.workoutTypeId.data = existing.workoutTypeId or 0
+            form.categoryId.data = existing.categoryId or 0
+            form.notes.data = existing.notes
+            form.tags.data = existing.tags
+            form.isTraining.data = existing.isTraining if existing.isTraining is not None else 2
         return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
@@ -233,24 +228,19 @@ def edit_extra():
         workout_id = form.workoutTypeId.data or None
         category_id = form.categoryId.data or None
 
-        stl_db.execute("""
-            INSERT INTO Supertl2Extra (activityId, workoutTypeId, categoryId, notes, tags, isTraining)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(activityId) DO UPDATE SET
-                workoutTypeId=excluded.workoutTypeId,
-                categoryId=excluded.categoryId,
-                notes=excluded.notes,
-                tags=excluded.tags,
-                isTraining=excluded.isTraining
-        """, (
-            activity_id,
-            workout_id,
-            category_id,
-            form.notes.data,
-            form.tags.data,
-            form.isTraining.data,
-        ))
-        stl_db.commit()
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+
+        training_data.workoutTypeId = workout_id
+        training_data.categoryId = category_id
+        training_data.notes = form.notes.data
+        training_data.tags = form.tags.data
+        training_data.isTraining = form.isTraining.data
+
+        sqla_db.session.commit()
+
         flash("Metadata updated.")
         return redirect(next_url)
 
