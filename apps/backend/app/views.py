@@ -80,12 +80,49 @@ def get_dashboard_context(week_offset=0):
         "total_duration": sum(d["total_duration"] for d in daily_summaries.values()),
     }
 
+    # Get previous week summaries
+    previous_week_start = start_of_week - timedelta(weeks=1)
+    previous_week_end = end_of_week - timedelta(weeks=1)
+    previous_activities = (
+        sqla_db.session.query(StravaActivity)
+        .filter(func.date(StravaActivity.startDateTime).between(previous_week_start, previous_week_end))
+        .order_by(StravaActivity.startDateTime)
+        .all()
+    )
+    previous_activities_by_day = defaultdict(list)
+    for a in previous_activities:
+        day = a.startDateTime.date()
+        activity_dict = {
+            "activityId": a.activityId,
+            "startDateTime": a.startDateTime,
+            "sportType": a.sportType,
+            "name": a.name,
+            "distance": a.distance,
+            "movingTimeInSeconds": a.movingTimeInSeconds,
+        }
+        previous_activities_by_day[day].append(activity_dict)
+
+    previous_days = [previous_week_start + timedelta(days=i) for i in range(7)]
+    previous_daily_summaries = {
+        day: {
+            "total_distance": sum(a["distance"] for a in previous_activities_by_day[day] if a["distance"] is not None),
+            "total_duration": sum(a["movingTimeInSeconds"] for a in previous_activities_by_day[day] if a["movingTimeInSeconds"] is not None),
+        }
+        for day in previous_days
+    }
+
+    previous_week_summary = {
+        "total_distance": sum(d["total_distance"] for d in previous_daily_summaries.values()),
+        "total_duration": sum(d["total_duration"] for d in previous_daily_summaries.values()),
+    }
+
     return {
         "start_of_week": start_of_week,
         "end_of_week": end_of_week,
         "activities_by_day": activities_by_day,
         "daily_summaries": daily_summaries,
         "week_summary": week_summary,
+        "previous_week_summary": previous_week_summary,
         "days": days,
         "week_offset": week_offset,
     }

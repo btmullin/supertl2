@@ -68,7 +68,13 @@
           <td colspan="3">This week</td>
           <td class="col-distance">{{ week_summary.total_distance | km }}</td>
           <td class="col-time">{{ week_summary.total_duration | format_duration }}</td>
+          <td class="col-extra"></td>
         </tr>
+        <tr>
+          <td colspan="3">Previous week</td>
+          <td class="col-distance">{{ previous_week_summary.total_distance | km }}</td>
+          <td class="col-time">{{ previous_week_summary.total_duration | format_duration }}</td>
+          <td class="col-extra"></td>
       </tbody> 
     </table>
   </div>
