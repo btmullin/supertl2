@@ -96,6 +96,12 @@ body {
   text-decoration: none;
 }
 
+.nav-link.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: default;
+}
+
 .nav-link:hover {
   background-color: var(--theme-color-primary-light);
 }
