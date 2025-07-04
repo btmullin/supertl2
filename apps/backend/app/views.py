@@ -168,7 +168,7 @@ def import_summary():
 
 @views.route("/test")
 def test():
-    activity = sqla_db.session.query(TrainingLogData).first()
+    activity = sqla_db.session.query(StravaActivity).first()
     return render_template("test.html", activity=activity)
 
 @views.route("/activity/edit", methods=["GET", "POST"])
@@ -252,3 +252,22 @@ def import_strava():
 
     flash(f"Imported new activities.")
     return redirect(url_for("views.dashboard"))
+
+@views.route("/activitylist")
+def activitylist():
+    page = request.args.get('page', 1, type=int)
+    offset = (page - 1) * PER_PAGE
+    # Fetch activities in date range
+    activities = (
+        sqla_db.session.query(StravaActivity)
+        .order_by(StravaActivity.startDateTime.desc())
+        .limit(PER_PAGE)
+        .offset(offset)
+        .all()
+    )
+
+    # Get total number of rows
+    total = sqla_db.session.query(func.count(StravaActivity.activityId)).scalar()
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE
+    
+    return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)

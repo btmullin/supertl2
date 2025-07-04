@@ -1,0 +1,38 @@
+{% extends 'base.html' %} {% block content %}
+<div class="whole-body">
+  <div class="section">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Date/Time</th>
+          <th>Sport</th>
+          <th>Name</th>
+          <th>Distance</th>
+          <th>Time</th>
+          <th>Extra?</th>
+        </tr>
+      </thead>
+      {% for activity in activities %}
+      <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
+          <td class="col-date">{{ activity.startDateTime | pretty_datetime }}</td>
+          <td class="col-sport">{{ activity.sportType }}</td>
+          <td class="col-name">{{ activity.name }}</td>
+          <td class="col-distance">{{ activity.distance | km }}</td>
+          <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+          <td class="col-extra">{% if activity.training_log is not none %}✅{% else %}❌{% endif %}</td>
+      </tr>
+      {% endfor %}  
+    </table>
+    <div class="pagination">
+      {% if page > 1 %}
+        <a href="{{ url_for('views.activitylist', page=page-1) }}">Previous</a>
+      {% endif %}
+    
+      <span>Page {{ page }} of {{ total_pages }}</span>
+    
+      {% if page < total_pages %}
+        <a href="{{ url_for('views.activitylist', page=page+1) }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
