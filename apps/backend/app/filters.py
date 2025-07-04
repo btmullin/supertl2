@@ -43,20 +43,19 @@ def format_duration(seconds):
 
 def format_datetime_pretty(value):
     """
-    Formats a datetime string into a more human-readable format.
+    Formats a datetime object into a human-readable string.
 
     Args:
-        value (str): A datetime string in the format "%Y-%m-%d %H:%M:%S".
+        value (datetime): A datetime object.
 
     Returns:
         str: The formatted datetime string in the format "MMM DD, YYYY h:mm AM/PM",
-             e.g., "Jun 19, 2025 9:01 PM". If the input is invalid or an error occurs,
-             the original value is returned as a fallback.
+             e.g., "Jun 19, 2025 9:01 PM". If the input is not a datetime object,
+             the original value is returned with an 'err' prefix.
     """
     try:
-        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-        return dt.strftime("%b %d, %Y %-I:%M %p")  # e.g., Jun 19, 2025 09:01 PM
-    except (ValueError, TypeError):
+        return value.strftime("%b %d, %Y %-I:%M %p")  # e.g., Jun 19, 2025 9:01 PM
+    except (AttributeError, ValueError, TypeError):
         return value  # Fallback if something goes wrong
 
 def format_timeonly(value):
@@ -64,7 +63,7 @@ def format_timeonly(value):
     Formats a datetime string into a time-only representation.
 
     Args:
-        value (str): A string representing a datetime in the format "%Y-%m-%d %H:%M:%S".
+        value (datetime): A datetime object.
 
     Returns:
         str: A formatted string representing the time in the format "%-I:%M %p" 
@@ -72,8 +71,7 @@ def format_timeonly(value):
              the original value is returned as a fallback.
     """
     try:
-        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-        return dt.strftime("%-I:%M %p")  # e.g., Jun 19, 2025 09:01 PM
+        return value.strftime("%-I:%M %p")  # e.g., Jun 19, 2025 09:01 PM
     except (ValueError, TypeError):
         return value  # Fallback if something goes wrong
 
