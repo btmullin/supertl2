@@ -97,6 +97,15 @@ def format_kilometers(meters):
     except (ValueError, TypeError):
         return meters
 
+def describe_object(obj):
+    out = ""
+    for attr in dir(obj):
+        if not attr.startswith("__"):
+            value = getattr(obj, attr)
+            out = f"{out}<p>{attr}: {type(value).__name__} : {value}</p>"
+    return out
+
+
 def register_filters(app):
     """
     Registers the formatting utility functions as Jinja2 filters in a Flask application.
@@ -108,3 +117,4 @@ def register_filters(app):
     app.jinja_env.filters["pretty_datetime"] = format_datetime_pretty
     app.jinja_env.filters["km"] = format_kilometers
     app.jinja_env.filters["time_only"] = format_timeonly
+    app.jinja_env.filters["describe_object"] = describe_object

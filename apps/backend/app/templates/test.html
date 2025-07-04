@@ -9,5 +9,6 @@
     <div><a href='/'>Main Page</a></div>
     <div><a href='/activity?id=4'>Activity Detail View</a></div>
     <div><a href="/import_summary?id=3">Import Summary</a></div>
+    <div>{{ activity | describe_object | safe }}</div>
 </body>
 </html>

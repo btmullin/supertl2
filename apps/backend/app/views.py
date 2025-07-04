@@ -166,10 +166,10 @@ def import_summary():
             print('Cancel button pressed', file=sys.stderr)
         return 'HELP ME'
 
-
 @views.route("/test")
 def test():
-    return render_template("test.html")
+    activity = sqla_db.session.query(TrainingLogData).first()
+    return render_template("test.html", activity=activity)
 
 @views.route("/activity/edit", methods=["GET", "POST"])
 def edit_extra():
