@@ -96,11 +96,13 @@ def format_kilometers(meters):
         return meters
 
 def describe_object(obj):
-    out = ""
+    out = f"<p>Object: {type(obj).__name__}</p>"
+    out += f"<p>Type: {type(obj)}</p>"
+    out += f"<p>Attributes:</p>"
     for attr in dir(obj):
         if not attr.startswith("__"):
             value = getattr(obj, attr)
-            out = f"{out}<p>{attr}: {type(value).__name__} : {value}</p>"
+            out = out + f"<p>{attr}: {type(value).__name__} : {value}</p>"
     return out
 
 
