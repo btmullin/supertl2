@@ -20,7 +20,7 @@
           <th class="col-name">Name</th>
           <th class="col-distance">Distance</th>
           <th class="col-time">Time</th>
-          <th>Extra?</th>
+          <th>Training Log</th>
         </tr>
       </thead>
       <tbody>
@@ -37,11 +37,11 @@
             <!-- A single activity goes on the same row as the date -->
             <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
               <td class="col-date">{{ day.strftime('%A') }}</td>
-              <td class="col-sport">{{ activity.sportType }}</td>
+              <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
               <td class="col-name">{{ activity.name }}</td>
               <td class="col-distance">{{ activity.distance | km }}</td>
               <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-              <td class="col-extra">{% if activity.has_extra %}✅{% else %}❌{% endif %}</td>
+              <td class="col-extra">{% if activity.training_log is not none %}✅{% else %}❌{% endif %}</td>
             </tr>
           {% else %}
             <!-- Multiple activities, first row has day of week and daily summary, then each activity gets its own row with just the time -->
@@ -55,11 +55,11 @@
             {% for activity in activities %}
             <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
               <td style="text-align:right;">{{ activity.startDateTime | time_only }}</td>
-              <td class="col-sport">{{ activity.sportType }}</td>
+              <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
               <td class="col-name">{{ activity.name }}</td>
               <td class="col-distance">{{ activity.distance | km }}</td>
               <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-              <td class="col-extra">{% if activity.has_extra %}✅{% else %}❌{% endif %}</td>
+              <td class="col-extra">{% if activity.training_log is not none %}✅{% else %}❌{% endif %}</td>
             </tr>
             {% endfor %}
           {% endif %}

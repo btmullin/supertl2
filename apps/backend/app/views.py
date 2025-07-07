@@ -23,7 +23,7 @@ from .forms.EditExtraForm import EditExtraForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
 
-PER_PAGE = 20
+PER_PAGE = 18
 
 views = Blueprint("views", __name__)
 
@@ -53,24 +53,15 @@ def get_dashboard_context(week_offset=0):
     activities_data = []
     for a in activities:
         day = a.startDateTime.date()
-        activity_dict = {
-            "activityId": a.activityId,
-            "startDateTime": a.startDateTime,
-            "sportType": a.sportType,
-            "name": a.name,
-            "distance": a.distance,
-            "movingTimeInSeconds": a.movingTimeInSeconds,
-            "has_extra": a.training_log is not None,
-        }
-        activities_by_day[day].append(activity_dict)
-        activities_data.append(activity_dict)
+        activities_by_day[day].append(a)
+        activities_data.append(a)
 
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
     daily_summaries = {
         day: {
-            "total_distance": sum(a["distance"] for a in activities_by_day[day] if a["distance"] is not None),
-            "total_duration": sum(a["movingTimeInSeconds"] for a in activities_by_day[day] if a["movingTimeInSeconds"] is not None),
+            "total_distance": sum(a.distance for a in activities_by_day[day] if a.distance is not None),
+            "total_duration": sum(a.movingTimeInSeconds for a in activities_by_day[day] if a.movingTimeInSeconds is not None),
         }
         for day in days
     }
@@ -92,21 +83,13 @@ def get_dashboard_context(week_offset=0):
     previous_activities_by_day = defaultdict(list)
     for a in previous_activities:
         day = a.startDateTime.date()
-        activity_dict = {
-            "activityId": a.activityId,
-            "startDateTime": a.startDateTime,
-            "sportType": a.sportType,
-            "name": a.name,
-            "distance": a.distance,
-            "movingTimeInSeconds": a.movingTimeInSeconds,
-        }
-        previous_activities_by_day[day].append(activity_dict)
+        previous_activities_by_day[day].append(a)
 
     previous_days = [previous_week_start + timedelta(days=i) for i in range(7)]
     previous_daily_summaries = {
         day: {
-            "total_distance": sum(a["distance"] for a in previous_activities_by_day[day] if a["distance"] is not None),
-            "total_duration": sum(a["movingTimeInSeconds"] for a in previous_activities_by_day[day] if a["movingTimeInSeconds"] is not None),
+            "total_distance": sum(a.distance for a in previous_activities_by_day[day] if a.distance is not None),
+            "total_duration": sum(a.movingTimeInSeconds for a in previous_activities_by_day[day] if a.movingTimeInSeconds is not None),
         }
         for day in previous_days
     }

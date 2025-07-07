@@ -12,3 +12,11 @@ class Category(BaseModel):
     # Self-referential relationship
     training_logs = relationship("TrainingLogData", back_populates="category")
     parent = relationship("Category", remote_side=[id], backref="children")
+
+    def full_path(self):
+        parts = []
+        current = self
+        while current:
+            parts.insert(0, current.name)
+            current = current.parent
+        return " : ".join(parts)

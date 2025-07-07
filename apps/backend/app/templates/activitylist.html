@@ -9,7 +9,8 @@
           <th>Name</th>
           <th>Distance</th>
           <th>Time</th>
-          <th>Extra?</th>
+          <th>Training Log</th>
+          <th>Is Training?</th>
         </tr>
       </thead>
       {% for activity in activities %}
@@ -20,6 +21,10 @@
           <td class="col-distance">{{ activity.distance | km }}</td>
           <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
           <td class="col-extra">{% if activity.training_log is not none %}✅{% else %}❌{% endif %}</td>
+          <td class="col-training">{% if activity.training_log is not none and activity.training_log.isTraining == 1 %}✅
+                                   {% elif activity.training_log is not none and activity.training_log.isTraining == 0 %}❌
+                                   {% else %}❔
+                                   {% endif %}</td>
       </tr>
       {% endfor %}  
     </table>

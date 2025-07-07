@@ -105,6 +105,20 @@ def describe_object(obj):
             out = out + f"<p>{attr}: {type(value).__name__} : {value}</p>"
     return out
 
+def displaySportOrCategory(activity):
+    """
+    Returns the sport type if no associated training log is found, otherwise returns the category in the training log.
+
+    Args:
+        activity (object): An activity object with a sportType attribute.
+
+    Returns:
+        str: The sport type or category of the activity.
+    """
+    if activity.training_log is not None:
+        return activity.training_log.category.full_path() if activity.training_log.category else "⚠️ No Category"
+
+    return activity.sportType
 
 def register_filters(app):
     """
@@ -118,3 +132,4 @@ def register_filters(app):
     app.jinja_env.filters["km"] = format_kilometers
     app.jinja_env.filters["time_only"] = format_timeonly
     app.jinja_env.filters["describe_object"] = describe_object
+    app.jinja_env.filters["displaySportOrCategory"] = displaySportOrCategory
