@@ -1,1 +1,1 @@
-docker exec -it supertl2 bash
+docker compose exec app sh

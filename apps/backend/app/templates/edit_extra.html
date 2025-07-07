@@ -20,6 +20,7 @@
         <a href="https://www.strava.com/activities/{{ activity.activityId }}" target="_blank" rel="noopener">
             View on Strava
           </a>
+          <p></p>
         <table class="styled-table">
           <tbody>
             <tr><th>Start Time</th><td>{{ activity.startDateTime | pretty_datetime }}</td></tr>
@@ -67,9 +68,9 @@
 
       </div>
 
-      <!-- Right: Editable Fields -->
+      <!-- Right: Editable Training Log Fields -->
       <div style="flex: 1; min-width: 300px;">
-        <h3>Edit Metadata</h3>
+        <h3>Edit Training Log Data</h3>
         <form method="POST">
           {{ form.hidden_tag() }}
 

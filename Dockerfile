@@ -3,6 +3,9 @@ WORKDIR /app
 COPY ./requirements.txt /app
 RUN pip install -r requirements.txt
 RUN apt update && apt install -y sqlite3
+RUN apt-get update && \
+    apt-get install -y tzdata
+ENV TZ=America/Chicago
 COPY . .
 EXPOSE 5000
 ENV FLASK_APP=apps/backend/supertl2.py

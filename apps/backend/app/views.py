@@ -2,6 +2,9 @@
 
 import os
 import sys
+import json
+from datetime import datetime, timedelta
+from collections import defaultdict
 from flask import (
     Blueprint,
     render_template,
@@ -13,17 +16,16 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from trainingdata.activity import Activity
+from sqlalchemy import func, text
+from app.db.db import import_strava_data
 from .forms import ImportSummaryForm
 from .forms.EditExtraForm import EditExtraForm
-from app.db import get_stl_db, import_strava_data
-import json
-from datetime import datetime, timedelta
-from collections import defaultdict
+from .models import StravaActivity, WorkoutType, TrainingLogData, Category
+from .db.base import sqla_db
 
-PER_PAGE = 20
+PER_PAGE = 18
 
 views = Blueprint("views", __name__)
-
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""
@@ -33,80 +35,91 @@ def allowed_file(filename):
         in current_app.config["ALLOWED_EXTENSIONS"]
     )
 
+def get_dashboard_context(week_offset=0):
+    today = datetime.today().date()
+    start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+    end_of_week = start_of_week + timedelta(days=6)
+
+    # Fetch activities in date range
+    activities = (
+        sqla_db.session.query(StravaActivity)
+        .filter(func.date(StravaActivity.startDateTime).between(start_of_week, end_of_week))
+        .order_by(StravaActivity.startDateTime)
+        .all()
+    )
+
+    # Organize and annotate
+    activities_by_day = defaultdict(list)
+    activities_data = []
+    for a in activities:
+        day = a.startDateTime.date()
+        activities_by_day[day].append(a)
+        activities_data.append(a)
+
+    days = [start_of_week + timedelta(days=i) for i in range(7)]
+
+    daily_summaries = {
+        day: {
+            "total_distance": sum(a.distance for a in activities_by_day[day] if a.distance is not None),
+            "total_duration": sum(a.movingTimeInSeconds for a in activities_by_day[day] if a.movingTimeInSeconds is not None),
+        }
+        for day in days
+    }
+
+    week_summary = {
+        "total_distance": sum(d["total_distance"] for d in daily_summaries.values()),
+        "total_duration": sum(d["total_duration"] for d in daily_summaries.values()),
+    }
+
+    # Get previous week summaries
+    previous_week_start = start_of_week - timedelta(weeks=1)
+    previous_week_end = end_of_week - timedelta(weeks=1)
+    previous_activities = (
+        sqla_db.session.query(StravaActivity)
+        .filter(func.date(StravaActivity.startDateTime).between(previous_week_start, previous_week_end))
+        .order_by(StravaActivity.startDateTime)
+        .all()
+    )
+    previous_activities_by_day = defaultdict(list)
+    for a in previous_activities:
+        day = a.startDateTime.date()
+        previous_activities_by_day[day].append(a)
+
+    previous_days = [previous_week_start + timedelta(days=i) for i in range(7)]
+    previous_daily_summaries = {
+        day: {
+            "total_distance": sum(a.distance for a in previous_activities_by_day[day] if a.distance is not None),
+            "total_duration": sum(a.movingTimeInSeconds for a in previous_activities_by_day[day] if a.movingTimeInSeconds is not None),
+        }
+        for day in previous_days
+    }
+
+    previous_week_summary = {
+        "total_distance": sum(d["total_distance"] for d in previous_daily_summaries.values()),
+        "total_duration": sum(d["total_duration"] for d in previous_daily_summaries.values()),
+    }
+
+    return {
+        "start_of_week": start_of_week,
+        "end_of_week": end_of_week,
+        "activities_by_day": activities_by_day,
+        "daily_summaries": daily_summaries,
+        "week_summary": week_summary,
+        "previous_week_summary": previous_week_summary,
+        "days": days,
+        "week_offset": week_offset,
+    }
 
 @views.route("/")
 @views.route("/dashboard")
 def dashboard():
     week_offset = int(request.args.get("week_offset", 0))
 
-    # Calculate the current Monday (week starts)
-    today = datetime.today().date()
-    start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
-    end_of_week = start_of_week + timedelta(days=6)
-    print(f"start_of_week: {start_of_week}, end_of_week: {end_of_week}", file=sys.stderr)
-
-    supertl2_db = get_stl_db()
-
-    # Fetch just the current week
-    rows = supertl2_db.execute("""
-        SELECT * FROM StravaActivity WHERE date(startDateTime) BETWEEN ? AND ?
-        ORDER BY startDateTime ASC""", (start_of_week.isoformat(), end_of_week.isoformat())).fetchall()
-    
-    # Collect activityIds to check extras
-    activity_ids = [row["activityId"] for row in rows]
-
-    # Find which ones have extras
-    placeholders = ",".join("?" for _ in activity_ids)
-    extras = supertl2_db.execute(
-        f"SELECT activityId FROM Supertl2Extra WHERE activityId IN ({placeholders})",
-        activity_ids
-    ).fetchall()
-    extras_set = set(row["activityId"] for row in extras)
-
-    # Attach info to each row
-    activities = []
-    for row in rows:
-        activity = dict(row)
-        activity["has_extra"] = activity["activityId"] in extras_set
-        activities.append(activity)
-
-    # Group activities by day of week
-    activities_by_day = defaultdict(list)
-    for a in activities:
-        day = datetime.fromisoformat(a["startDateTime"]).date()
-        activities_by_day[day].append(a)
-    days = [(start_of_week + timedelta(days=i)) for i in range(7)]
-
-    # Get daily summaries
-    daily_summaries = defaultdict(list)
-    for i,day in enumerate(days):
-        daily_summaries[day] = {
-            "total_distance": sum(
-                a["distance"] for a in activities_by_day[day] if a["distance"] is not None
-            ),
-            "total_duration": sum(
-                a["movingTimeInSeconds"] for a in activities_by_day[day] if a["movingTimeInSeconds"] is not None
-            ),
-        }
-
-    # Get this weeks summary
-    week_summary = {
-        "total_distance": sum(
-            daily_summaries[day]["total_distance"] for day in days
-        ),
-        "total_duration": sum(
-            daily_summaries[day]["total_duration"] for day in days
-        ),
-    }
-
-    return render_template("dashboard.html",
-                           start_of_week=start_of_week,
-                           week_offset=week_offset,
-                           activities_by_day=activities_by_day,
-                           days=days,
-                           daily_summaries=daily_summaries,
-                           week_summary=week_summary,)
-
+    context = get_dashboard_context(week_offset)
+    return render_template(
+        "dashboard.html",
+        **context
+    )
 
 @views.route("/calendar")
 def calendar():
@@ -173,10 +186,10 @@ def import_summary():
             print('Cancel button pressed', file=sys.stderr)
         return 'HELP ME'
 
-
 @views.route("/test")
 def test():
-    return render_template("test.html")
+    activity = sqla_db.session.query(StravaActivity).first()
+    return render_template("test.html", activity=activity)
 
 @views.route("/activity/edit", methods=["GET", "POST"])
 def edit_extra():
@@ -186,51 +199,46 @@ def edit_extra():
         flash("Missing activity ID.")
         return redirect(url_for("views.dashboard"))
 
-    stl_db = get_stl_db()
+    activity = sqla_db.session.get(StravaActivity, activity_id)
+    if not activity:
+        flash("Activity not found.")
+        return redirect(next_url)
 
-    activity = stl_db.execute(
-        "SELECT * FROM StravaActivity WHERE activityId = ?", (activity_id,)
-        ).fetchone()
-
-    activity_data = json.loads(activity["data"]) if activity and activity["data"] else {}
+    activity_data = activity.data or {}
     summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
 
     form = EditExtraForm()
 
     # Populate select fields
     form.workoutTypeId.choices = [(0, "—")] + [
-        (row["id"], row["name"])
-        for row in stl_db.execute("SELECT id, name FROM WorkoutType ORDER BY name").fetchall()
+        (w.id, w.name) for w in sqla_db.session.query(WorkoutType).order_by(WorkoutType.name).all()
     ]
 
-    form.categoryId.choices = [(0, "—")] + [
-        (row["id"], row["full_path"])
-        for row in stl_db.execute("""
-            WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
-                SELECT id, name, parent_id, name
-                FROM Category
-                WHERE parent_id IS NULL
-                UNION ALL
-                SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
-                FROM Category c
-                JOIN category_path cp ON c.parent_id = cp.id
-            )
-            SELECT id, full_path FROM category_path
-            ORDER BY full_path
-        """).fetchall()
-    ]
+    # Recursive category path query
+    category_paths = sqla_db.session.execute(text("""
+        WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
+            SELECT id, name, parent_id, name
+            FROM Category
+            WHERE parent_id IS NULL
+            UNION ALL
+            SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
+            FROM Category c
+            JOIN category_path cp ON c.parent_id = cp.id
+        )
+        SELECT id, full_path FROM category_path
+        ORDER BY full_path
+    """)).fetchall()
+    form.categoryId.choices = [(0, "—")] + [(row.id, row.full_path) for row in category_paths]
 
     if request.method == "GET":
         form.activityId.data = activity_id
-        row = stl_db.execute(
-            "SELECT * FROM Supertl2Extra WHERE activityId = ?", (activity_id,)
-        ).fetchone()
-        if row:
-            form.workoutTypeId.data = row["workoutTypeId"] or 0
-            form.categoryId.data = row["categoryId"] or 0
-            form.notes.data = row["notes"]
-            form.tags.data = row["tags"]
-            form.isTraining.data = row["isTraining"] if row["isTraining"] is not None else 2
+        existing = sqla_db.session.get(TrainingLogData, activity_id)
+        if existing:
+            form.workoutTypeId.data = existing.workoutTypeId or 0
+            form.categoryId.data = existing.categoryId or 0
+            form.notes.data = existing.notes
+            form.tags.data = existing.tags
+            form.isTraining.data = existing.isTraining if existing.isTraining is not None else 2
         return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
@@ -240,24 +248,19 @@ def edit_extra():
         workout_id = form.workoutTypeId.data or None
         category_id = form.categoryId.data or None
 
-        stl_db.execute("""
-            INSERT INTO Supertl2Extra (activityId, workoutTypeId, categoryId, notes, tags, isTraining)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(activityId) DO UPDATE SET
-                workoutTypeId=excluded.workoutTypeId,
-                categoryId=excluded.categoryId,
-                notes=excluded.notes,
-                tags=excluded.tags,
-                isTraining=excluded.isTraining
-        """, (
-            activity_id,
-            workout_id,
-            category_id,
-            form.notes.data,
-            form.tags.data,
-            form.isTraining.data,
-        ))
-        stl_db.commit()
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+
+        training_data.workoutTypeId = workout_id
+        training_data.categoryId = category_id
+        training_data.notes = form.notes.data
+        training_data.tags = form.tags.data
+        training_data.isTraining = form.isTraining.data
+
+        sqla_db.session.commit()
+
         flash("Metadata updated.")
         return redirect(next_url)
 
@@ -269,3 +272,22 @@ def import_strava():
 
     flash(f"Imported new activities.")
     return redirect(url_for("views.dashboard"))
+
+@views.route("/activitylist")
+def activitylist():
+    page = request.args.get('page', 1, type=int)
+    offset = (page - 1) * PER_PAGE
+    # Fetch activities in date range
+    activities = (
+        sqla_db.session.query(StravaActivity)
+        .order_by(StravaActivity.startDateTime.desc())
+        .limit(PER_PAGE)
+        .offset(offset)
+        .all()
+    )
+
+    # Get total number of rows
+    total = sqla_db.session.query(func.count(StravaActivity.activityId)).scalar()
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE
+    
+    return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)

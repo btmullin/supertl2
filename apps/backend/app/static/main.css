@@ -96,6 +96,12 @@ body {
   text-decoration: none;
 }
 
+.nav-link.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: default;
+}
+
 .nav-link:hover {
   background-color: var(--theme-color-primary-light);
 }
@@ -362,11 +368,12 @@ button:hover {
 }
 
 .col-date     { width: 150px; }
-.col-sport    { width: 100px; }
+.col-sport    { width: 300px; }
 /* .col-name     { width: 400px; } */
 .col-distance { width: 150px; }
 .col-time     { width: 150px; }
 .col-extra    { width: 100px; }
+.col-training { width: 100px; }
 
 .styled-table th.col-time,
 .styled-table th.col-distance,

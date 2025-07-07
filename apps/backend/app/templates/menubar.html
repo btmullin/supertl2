@@ -6,20 +6,44 @@
                href="{{ url_for('views.dashboard') }}">Dashboard</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if current_path == url_for('views.calendar') else '' }}"
-               href="{{ url_for('views.calendar') }}">Calendar</a>
+            <a class="nav-link {{ 'active' if current_path == url_for('views.activitylist') else '' }}"
+               href="{{ url_for('views.activitylist') }}">Activity List</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if current_path == url_for('views.analysis') else '' }}"
-               href="{{ url_for('views.analysis') }}">Analysis</a>
+            {% set disabled = true %}  {# currently no calendar view #}
+            {% if disabled %}
+              <span class="nav-link disabled" aria-disabled="true" tabindex="-1">Calendar</span>
+            {% else %}
+              <a class="nav-link {{ 'active' if current_path == url_for('views.calendar') else '' }}"
+                 href="{{ url_for('views.calendar') }}">Calendar</a>
+            {% endif %}
+          </li>
+          <li class="nav-item">
+            {% set disabled = true %}  {# currently no analysis view #}
+            {% if disabled %}
+              <span class="nav-link disabled" aria-disabled="true" tabindex="-1">Analysis</span>
+            {% else %}
+                <a class="nav-link {{ 'active' if current_path == url_for('views.analysis') else '' }}"
+                href="{{ url_for('views.analysis') }}">Analysis</a>
+            {% endif %}
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if current_path == url_for('views.gear') else '' }}"
-               href="{{ url_for('views.gear') }}">Gear</a>
+            {% set disabled = true %}  {# currently no gear view #}
+            {% if disabled %}
+              <span class="nav-link disabled" aria-disabled="true" tabindex="-1">Gear</span>
+            {% else %}
+                <a class="nav-link {{ 'active' if current_path == url_for('views.gear') else '' }}"
+                href="{{ url_for('views.gear') }}">Gear</a>
+            {% endif %}
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if current_path == url_for('views.import_page') else '' }}"
-               href="{{ url_for('views.import_page') }}">Import</a>
+            {% set disabled = true %}  {# currently no import view #}
+            {% if disabled %}
+              <span class="nav-link disabled" aria-disabled="true" tabindex="-1">Import</span>
+            {% else %}
+                <a class="nav-link {{ 'active' if current_path == url_for('views.import_page') else '' }}"
+                href="{{ url_for('views.import_page') }}">Import</a>
+            {% endif %}
         </li>
         <li class="nav-item">
             <a class="nav-link {{ 'active' if current_path == url_for('views.import_strava') else '' }}"

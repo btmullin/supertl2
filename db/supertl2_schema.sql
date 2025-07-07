@@ -1,10 +1,12 @@
 -- Initialize the database
 
-DROP TABLE IF EXISTS activity;
-DROP TABLE IF EXISTS category;
+DROP TABLE IF EXISTS TrainingData;
+DROP TABLE IF EXISTS WorkoutType;
+DROP TABLE IF EXISTS Category;
+DROP TABLE IF EXISTS StravaActivity;
 
 -- Main table with logical FK to Strava activity and workout type
-CREATE TABLE Supertl2Extra (
+CREATE TABLE TrainingLogData (
     activityId TEXT PRIMARY KEY,     -- matches strava.Activity.activityId
     workoutTypeId INTEGER,           -- optional, maps to WorkoutType.id
     categoryId INTEGER,              -- optional, FK to Category
@@ -14,6 +16,7 @@ CREATE TABLE Supertl2Extra (
     
     FOREIGN KEY (workoutTypeId) REFERENCES WorkoutType(id)
     FOREIGN KEY (categoryId) REFERENCES Category(id)
+    FOREIGN KEY (activityId) REFERENCES StravaActivity(activityId)
 );
 
 -- Table of allowable workout types
