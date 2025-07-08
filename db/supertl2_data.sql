@@ -24,3 +24,4 @@ INSERT INTO WorkoutType(name, description) VALUES('L4', 'Level 4 Intervals');
 INSERT INTO WorkoutType(name, description) VALUES('OD', 'Over Distance');
 INSERT INTO WorkoutType(name, description) VALUES('Speed', 'Neruomuscular Focused Speeds');
 INSERT INTO WorkoutType(name, description) VALUES('Strength', 'Strength Focused');
+INSERT INTO WorkoutType(name, description) VALUES('Race', 'Any type of race');
