@@ -15,7 +15,7 @@
       </thead>
       {% for activity in activities %}
       <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
-          <td class="col-date">{{ activity.startDateTime | pretty_datetime }}</td>
+          <td class="col-date-time">{{ activity.startDateTime | pretty_datetime }}</td>
           <td class="col-sport">{{ activity.sportType }}</td>
           <td class="col-name">{{ activity.name }}</td>
           <td class="col-distance">{{ activity.distance | km }}</td>
