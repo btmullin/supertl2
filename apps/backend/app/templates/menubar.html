@@ -46,12 +46,8 @@
             {% endif %}
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if current_path == url_for('views.import_strava') else '' }}"
-               href="{{ url_for('views.import_strava') }}">Import Strava</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ 'active' if current_path == url_for('views.add_category') else '' }}"
-             href="{{ url_for('views.add_category') }}">Add Category</a>
+          <a class="nav-link {{ 'active' if current_path == url_for('views.admin') else '' }}"
+             href="{{ url_for('views.admin') }}">Admin</a>
       </li>
   </ul>
 {% endmacro %}

@@ -327,3 +327,7 @@ def add_category():
         return redirect(url_for("views.dashboard"))
 
     return render_template("add_category.html", form=form)
+
+@views.route("/admin")
+def admin():
+    return render_template("admin.html")
