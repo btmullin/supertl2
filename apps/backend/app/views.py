@@ -20,6 +20,7 @@ from sqlalchemy import func, text
 from app.db.db import import_strava_data
 from .forms import ImportSummaryForm
 from .forms.EditExtraForm import EditExtraForm
+from .forms.CategoryForm import CategoryForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
 
@@ -295,3 +296,38 @@ def activitylist():
     total_pages = (total + PER_PAGE - 1) // PER_PAGE
     
     return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)
+
+@views.route("/addcategory", methods=["GET", "POST"])
+def add_category():
+    form = CategoryForm()
+    category_paths = sqla_db.session.execute(text("""
+        WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
+            SELECT id, name, parent_id, name
+            FROM Category
+            WHERE parent_id IS NULL
+            UNION ALL
+            SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
+            FROM Category c
+            JOIN category_path cp ON c.parent_id = cp.id
+        )
+        SELECT id, full_path FROM category_path
+        ORDER BY full_path
+    """)).fetchall()
+    form.parent_id.choices = [(0, "— No Parent —")] + [(row.id, row.full_path) for row in category_paths]
+
+    if "cancel" in request.form:
+        return redirect(url_for("views.dashboard"))
+
+    if form.validate_on_submit():
+        parent_id = form.parent_id.data or None
+        new_cat = Category(name=form.name.data, parent_id=parent_id)
+        sqla_db.session.add(new_cat)
+        sqla_db.session.commit()
+        flash("Category added.")
+        return redirect(url_for("views.dashboard"))
+
+    return render_template("add_category.html", form=form)
+
+@views.route("/admin")
+def admin():
+    return render_template("admin.html")

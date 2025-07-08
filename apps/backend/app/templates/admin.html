@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="whole-body">
+    <h2>Categories</h2>
+    <a href="{{ url_for('views.add_category') }}">Add Category</a>
+    <h2>Import</h2>
+    <a href="{{ url_for('views.import_strava') }}">Import Strava</a>
+    <h2>Future Settings</h2>
+</div>
+
+{% endblock %}
