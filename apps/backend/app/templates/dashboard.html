@@ -20,7 +20,6 @@
           <th class="col-name">Name</th>
           <th class="col-distance">Distance</th>
           <th class="col-time">Time</th>
-          <th>Training Log</th>
         </tr>
       </thead>
       <tbody>
@@ -41,7 +40,6 @@
               <td class="col-name">{{ activity.name }}</td>
               <td class="col-distance">{{ activity.distance | km }}</td>
               <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-              <td class="col-extra">{% if activity.training_log is not none %}✅{% else %}❌{% endif %}</td>
             </tr>
           {% else %}
             <!-- Multiple activities, first row has day of week and daily summary, then each activity gets its own row with just the time -->
@@ -50,7 +48,6 @@
               <td colspan="2"></td>
               <td class="col-distance-summary">{{ daily_summaries[day].total_distance | km }}</td>
               <td class="col-time-summary">{{ daily_summaries[day].total_duration | format_duration }}</td>
-              <td class="col-extra"></td>
             </tr>
             {% for activity in activities %}
             <tr onclick="window.location='{{ url_for('views.edit_extra', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
@@ -59,7 +56,6 @@
               <td class="col-name">{{ activity.name }}</td>
               <td class="col-distance">{{ activity.distance | km }}</td>
               <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-              <td class="col-extra">{% if activity.training_log is not none %}✅{% else %}❌{% endif %}</td>
             </tr>
             {% endfor %}
           {% endif %}
@@ -68,13 +64,11 @@
           <td colspan="3">This week</td>
           <td class="col-distance">{{ week_summary.total_distance | km }}</td>
           <td class="col-time">{{ week_summary.total_duration | format_duration }}</td>
-          <td class="col-extra"></td>
         </tr>
         <tr>
           <td colspan="3">Previous week</td>
           <td class="col-distance">{{ previous_week_summary.total_distance | km }}</td>
           <td class="col-time">{{ previous_week_summary.total_duration | format_duration }}</td>
-          <td class="col-extra"></td>
       </tbody> 
     </table>
   </div>

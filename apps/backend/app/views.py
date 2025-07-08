@@ -23,7 +23,7 @@ from .forms.EditExtraForm import EditExtraForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
 
-PER_PAGE = 18
+PER_PAGE = 25
 
 views = Blueprint("views", __name__)
 
@@ -43,7 +43,11 @@ def get_dashboard_context(week_offset=0):
     # Fetch activities in date range
     activities = (
         sqla_db.session.query(StravaActivity)
-        .filter(func.date(StravaActivity.startDateTime).between(start_of_week, end_of_week))
+        .join(StravaActivity.training_log)  # Only join activities that have a training_log
+        .filter(
+            TrainingLogData.isTraining == 1,
+            func.date(StravaActivity.startDateTime).between(start_of_week, end_of_week)
+        )
         .order_by(StravaActivity.startDateTime)
         .all()
     )
