@@ -70,6 +70,7 @@ def import_strava_data():
     # Attach the Strava database under the alias "strava"
     stl_cursor.execute(f"ATTACH DATABASE '{STRAVA_DB}' AS strava")
 
+    ## ACTIVITY IMPORT ##
     # Print which activities are new
     stl_cursor.execute("""
                        SELECT name, activityId FROM strava.Activity WHERE activityId NOT IN (SELECT activityId FROM StravaActivity)
@@ -79,13 +80,31 @@ def import_strava_data():
     for activity in new_activities:
         print(f"Importing new activity: {activity['name']}")
 
-
     # Insert activities that don't exist yet in supertl
     stl_cursor.execute("""
         INSERT INTO StravaActivity
         SELECT *
         FROM strava.Activity
         WHERE activityId NOT IN (SELECT activityId FROM StravaActivity)
+    """)
+
+    ## STREAM IMPORT ##
+    # Print which activities are new
+    stl_cursor.execute("""
+                       SELECT DISTINCT activityId FROM strava.ActivityStream WHERE activityId NOT IN (SELECT activityId FROM StravaActivityStream)
+                       """)
+    new_activity_streams = stl_cursor.fetchall()
+    print(f"Found {len(new_activity_streams)} new activities with streams to import.")
+
+    # Insert activities that don't exist yet in supertl
+    stl_cursor.execute("""
+        INSERT INTO StravaActivityStream
+        SELECT *
+        FROM strava.ActivityStream s
+        WHERE NOT EXISTS (
+            SELECT 1 FROM StravaActivityStream t
+            WHERE t.activityId = s.activityId AND t.streamType = s.streamType
+        )
     """)
 
     supertl_db.commit()
