@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="whole-body">
+    <h2>Add Category</h2>
+    <div class="section">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div>
+                {{ form.name.label }}<br>
+                {{ form.name(class="form-control") }}
+            </div>
+            <div>
+                {{ form.parent_id.label }}<br>
+                {{ form.parent_id(class="form-control") }}
+            </div>
+            {{ form.submit() }}
+            {{ form.cancel(formnovalidate=True) }}
+        </form>
+    </div>
+</div>
+
+{% endblock %}
