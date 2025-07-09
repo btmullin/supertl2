@@ -17,3 +17,5 @@ class StravaActivity(BaseModel):
     data = Column(JSON)
 
     training_log = relationship("TrainingLogData", back_populates="strava_activity", uselist=False)
+
+    streams = relationship("StravaActivityStream", back_populates="strava_activity", cascade="all, delete-orphan")
