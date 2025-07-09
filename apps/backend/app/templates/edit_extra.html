@@ -107,5 +107,96 @@
       </div>
     </div>
   </div>
-</div>
+  <div class="section">
+    <h3>Activity Streams</h3>
+    {% if activity.streams %}
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Stream Type</th>
+            <th>Created On</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for stream in activity.streams %}
+            <tr>
+              <td>{{ stream.streamType }}</td>
+              <td>{{ stream.createdOn | pretty_datetime }}</td>
+              <!-- <td>{{ stream.data | tojson }}</td> -->
+               <td>stream data maybe</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No streams available for this activity.</p>
+    {% endif %}
+  </div>
+  <div class="section">
+    <canvas id="streamChart" width="800" height="200"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <script>
+      const formatTime = (seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h > 0 ? h + ':' : ''}${h > 0 ? String(m).padStart(2, '0') : m}:${String(s).padStart(2, '0')}`;
+      };
+      const ctx = document.getElementById('streamChart').getContext('2d');
+      const streamChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+              labels: {{ activity.streams[8].data }},
+              datasets: [{
+                  label: '{{ activity.streams[4].streamType }}',
+                  data: {{ activity.streams[4].data }},
+                  borderWidth: 2,
+                  fill: false,
+                  borderColor: 'rgb(200, 50, 50)',
+                  pointRadius: 0,
+                  tension: 0.3
+              }]
+          },
+          options: {
+              responsive: true,
+              scales: {
+                  x: {
+                      display: true,
+                      title: {
+                          display: true,
+                          text: 'Seconds'
+                      },
+                      ticks: {
+                        maxTicksLimit: 15,  // Reduce number of ticks
+                        callback: (value, index, ticks) => formatTime(value)
+                    }
+                  },
+                  y: {
+                      display: true,
+                      title: {
+                          display: true,
+                          text: '{{ activity.streams[4].streamType }}'
+                      }
+                  }
+              }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                title: (tooltipItems) => {
+                  const value = tooltipItems[0].label;  // label is the raw x-axis label
+                  //return formatTime(parseInt(value));
+                  return 'testtest';
+                },
+                label: (tooltipItem) => {
+                  return `test${tooltipItem.dataset.label}: ${tooltipItem.formattedValue}`;
+                }
+              }
+            }
+          }
+      });
+    </script>
+  </div>
 {% endblock %}
