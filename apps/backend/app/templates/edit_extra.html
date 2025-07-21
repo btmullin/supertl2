@@ -108,160 +108,138 @@
     </div>
   </div>
   <div class="section">
-    <h3>Activity Streams</h3>
-    {% if activity.streams %}
-      <table class="styled-table">
-        <thead>
-          <tr>
-            <th>Stream Type</th>
-            <th>Created On</th>
-            <th>Data</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for stream in activity.streams %}
-            <tr>
-              <td>{{ stream.streamType }}</td>
-              <td>{{ stream.createdOn | pretty_datetime }}</td>
-              <!-- <td>{{ stream.data | tojson }}</td> -->
-               <td>stream data maybe</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p>No streams available for this activity.</p>
-    {% endif %}
-  </div>
-  <div class="section">
-    <canvas id="streamChart" width="800" height="200"></canvas>
+    <canvas id="streamChart"></canvas>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
     <script>
-      const verticalLinePlugin = {
-        id: 'hoverLine',
-        afterDraw(chart, args, options) {
-          const tooltip = chart.tooltip;
-          const activeElements = tooltip._active || tooltip.dataPoints;
-      
-          if (!activeElements || activeElements.length === 0) return;
-      
-          const ctx = chart.ctx;
-          const x = activeElements[0].element.x;
-          const topY = chart.chartArea.top;
-          const bottomY = chart.chartArea.bottom;
-      
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(x, topY);
-          ctx.lineTo(x, bottomY);
-          ctx.lineWidth = options.lineWidth || 1;
-          ctx.strokeStyle = options.color || 'rgba(0, 0, 0, 0.5)';
-          if (options.dash) ctx.setLineDash(options.dash);
-          ctx.stroke();
-          ctx.restore();
-        }
-      };
-      Chart.register(verticalLinePlugin);
+      requestAnimationFrame(() => {
+        const verticalLinePlugin = {
+          id: 'hoverLine',
+          afterDraw(chart, args, options) {
+            const tooltip = chart.tooltip;
+            const activeElements = tooltip._active || tooltip.dataPoints;
+        
+            if (!activeElements || activeElements.length === 0) return;
+        
+            const ctx = chart.ctx;
+            const x = activeElements[0].element.x;
+            const topY = chart.chartArea.top;
+            const bottomY = chart.chartArea.bottom;
+        
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x, topY);
+            ctx.lineTo(x, bottomY);
+            ctx.lineWidth = options.lineWidth || 1;
+            ctx.strokeStyle = options.color || 'rgba(0, 0, 0, 0.5)';
+            if (options.dash) ctx.setLineDash(options.dash);
+            ctx.stroke();
+            ctx.restore();
+          }
+        };
+        Chart.register(verticalLinePlugin);
 
-      const formatTime = (seconds) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        return `${h > 0 ? h + ':' : ''}${h > 0 ? String(m).padStart(2, '0') : m}:${String(s).padStart(2, '0')}`;
-      };
+        const formatTime = (seconds) => {
+          const h = Math.floor(seconds / 3600);
+          const m = Math.floor((seconds % 3600) / 60);
+          const s = seconds % 60;
+          return `${h > 0 ? h + ':' : ''}${h > 0 ? String(m).padStart(2, '0') : m}:${String(s).padStart(2, '0')}`;
+        };
 
-      const ctx = document.getElementById('streamChart').getContext('2d');
+        const ctx = document.getElementById('streamChart').getContext('2d');
 
-      const streamChart = new Chart(ctx,
-      {
-        type: 'line',
-        data: {
-          datasets: [
-            {
-              label: 'Altitude',
-              data: {{ activity.getAltitudePlotData() | tojson }},
-              borderWidth: 2,
-              fill: true,
-              yAxisID: 'y_alt',
-              borderColor: 'rgb(200, 200, 200)',
-              pointRadius: 0,
-              tension: 0.3
-            },
-            {
-                label: 'Heart Rate',
-                data: {{ activity.getHRPlotData() | tojson }},
+        const streamChart = new Chart(ctx,
+        {
+          type: 'line',
+          data: {
+            datasets: [
+              {
+                label: 'Altitude',
+                data: {{ activity.getAltitudePlotData() | tojson }},
                 borderWidth: 2,
                 fill: true,
-                yAxisID: 'y_hr',
-                borderColor: 'rgb(200, 50, 50)',
-                backgroundColor: 'rgba(200, 50, 50, 0.2)',
+                yAxisID: 'y_alt',
+                borderColor: 'rgb(200, 200, 200)',
                 pointRadius: 0,
                 tension: 0.3
-              }
-            ]
-          },
-          options: {
-            plugins: {
-              hoverLine: {
-                color: 'rgba(0, 0, 0, 0.5)', // optional: line color
-                lineWidth: 1,
-                dash: [4, 4] // optional: dashed line
               },
-              legend: {
-                display: true,
-                position: 'right',
-                labels: {
-                  color: 'rgb(50, 99, 132)'
+              {
+                  label: 'Heart Rate',
+                  data: {{ activity.getHRPlotData() | tojson }},
+                  borderWidth: 2,
+                  fill: true,
+                  yAxisID: 'y_hr',
+                  borderColor: 'rgb(200, 50, 50)',
+                  backgroundColor: 'rgba(200, 50, 50, 0.2)',
+                  pointRadius: 0,
+                  tension: 0.3
+                }
+              ]
+            },
+            options: {
+              maintainAspectRatio: false,
+              plugins: {
+                hoverLine: {
+                  color: 'rgba(0, 0, 0, 0.5)', // optional: line color
+                  lineWidth: 1,
+                  dash: [4, 4] // optional: dashed line
+                },
+                legend: {
+                  display: true,
+                  position: 'right',
+                  labels: {
+                    color: 'rgb(50, 99, 132)'
+                  }
+                },
+                tooltip: {
+                  enabled: true,
+                  mode: 'index',
+                  intersect: false,
                 }
               },
-              tooltip: {
-                enabled: true,
+              pointHoverRadius: 5,
+              responsive: true,
+              scales: {
+                x: {
+                  type: 'linear',
+                  display: true,
+                  title: {
+                    display: true,
+                    text: 'Seconds'
+                  },
+                  ticks: {
+                    maxTicksLimit: 15,  // Reduce number of ticks
+                    callback: (value, index, ticks) => formatTime(value)
+                  }
+                },
+                y_alt: {
+                  display: true,
+                  position: 'right',
+                  title: {
+                    display: true,
+                    text: 'Altitude (m)'
+                  }
+                },
+                y_hr: {
+                  display: true,
+                  title: {
+                    display: true,
+                    text: 'Heart Rate (bpm)'
+                  }
+                }
+              },
+              interaction: {
                 mode: 'index',
                 intersect: false,
-              }
-            },
-            pointHoverRadius: 5,
-            responsive: true,
-            scales: {
-              x: {
-                type: 'linear',
-                display: true,
-                title: {
-                  display: true,
-                  text: 'Seconds'
-                },
-                ticks: {
-                  maxTicksLimit: 15,  // Reduce number of ticks
-                  callback: (value, index, ticks) => formatTime(value)
-                }
               },
-              y_alt: {
-                display: true,
-                position: 'right',
-                title: {
-                  display: true,
-                  text: 'Altitude (m)'
-                }
+              hover: {
+                mode: 'index',
+                intersect: false
               },
-              y_hr: {
-                display: true,
-                title: {
-                  display: true,
-                  text: 'Heart Rate (bpm)'
-                }
-              }
             },
-            interaction: {
-              mode: 'index',
-              intersect: false,
-            },
-            hover: {
-              mode: 'index',
-              intersect: false
-            },
-          },
+        });
       });
     </script>
   </div>
+</div>
 {% endblock %}
