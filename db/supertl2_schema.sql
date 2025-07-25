@@ -68,3 +68,12 @@ CREATE TABLE StravaActivity (
     workoutType VARCHAR(255) DEFAULT NULL,
     PRIMARY KEY(activityId)
 );
+
+CREATE TABLE StravaActivityStream (
+    activityId VARCHAR(255) NOT NULL,
+    streamType VARCHAR(255) NOT NULL,
+    createdOn DATETIME NOT NULL, --(DC2Type:datetime_immutable)
+    data CLOB NOT NULL, --(DC2Type:json)
+    bestAverages CLOB DEFAULT NULL, --(DC2Type:json)
+    PRIMARY KEY(activityId, streamType)
+);

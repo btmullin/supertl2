@@ -17,3 +17,31 @@ class StravaActivity(BaseModel):
     data = Column(JSON)
 
     training_log = relationship("TrainingLogData", back_populates="strava_activity", uselist=False)
+
+    streams = relationship("StravaActivityStream", back_populates="strava_activity", cascade="all, delete-orphan")
+
+    def getHRPlotData(self):
+        """Get the heart rate stream data."""
+        hr = None
+        time = None
+        for stream in self.streams:
+            if stream.streamType == "heartrate":
+                hr = stream.data
+            if stream.streamType == "time":
+                time = stream.data
+        if hr and time:
+            return [{"x": t, "y": y} for t, y in zip(time, hr)]
+        return None
+    
+    def getAltitudePlotData(self):
+        """Get the altitude stream data."""
+        altitude = None
+        time = None
+        for stream in self.streams:
+            if stream.streamType == "altitude":
+                altitude = stream.data
+            if stream.streamType == "time":
+                time = stream.data
+        if altitude and time:
+            return [{"x": t, "y": a} for t, a in zip(time, altitude)]
+        return None

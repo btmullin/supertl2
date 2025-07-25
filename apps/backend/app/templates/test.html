@@ -6,9 +6,101 @@
     <title>Document</title>
 </head>
 <body>
-    <div><a href='/'>Main Page</a></div>
-    <div><a href='/activity?id=4'>Activity Detail View</a></div>
-    <div><a href="/import_summary?id=3">Import Summary</a></div>
-    <div>{{ activity | describe_object | safe }}</div>
+  <div>
+    <h1>Stream Data Time</h1>
+    {% set points = activity.getHRPlotData() %}
+    {% for point in points %}
+      ({{ point.x }}, {{ point.y }})<br>
+    {% endfor %}
+  </div>
+  <div>{{ activity | describe_object | safe }}</div>
+  <div>{{ activity.getHRPlotData() | tojson }}</div>
+  <div><canvas id="myChart" width="800" height="400"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Plugin that draws the vertical line
+    const verticalLinePlugin = {
+      id: 'hoverLine',
+      afterDraw(chart, args, options) {
+        const tooltip = chart.tooltip;
+        if (!tooltip || !tooltip._active || tooltip._active.length === 0) return;
+  
+        const ctx = chart.ctx;
+        const x = tooltip._active[0].element.x;
+        const topY = chart.chartArea.top;
+        const bottomY = chart.chartArea.bottom;
+  
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, topY);
+        ctx.lineTo(x, bottomY);
+        ctx.lineWidth = options.lineWidth || 1;
+        ctx.strokeStyle = options.color || 'rgba(0, 0, 0, 0.5)';
+        if (options.dash) ctx.setLineDash(options.dash);
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+  
+    // Register the plugin
+    Chart.register(verticalLinePlugin);
+  
+    const ctx = document.getElementById('myChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [0, 1, 2, 3, 4, 5],
+        datasets: [
+          {
+            label: 'Series A',
+            data: [10, 20, 15, 25, 30, 40],
+            borderColor: 'red',
+            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+            fill: true,
+            tension: 0.3
+          },
+          {
+            label: 'Series B',
+            data: [100, 120, 130, 110, 140, 160],
+            borderColor: 'blue',
+            backgroundColor: 'rgba(0, 0, 255, 0.2)',
+            fill: true,
+            tension: 0.3,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          },
+          hoverLine: {
+            color: 'rgba(0, 0, 0, 0.5)',
+            lineWidth: 1,
+            dash: [4, 4]
+          }
+        },
+        scales: {
+          y: {
+            position: 'left'
+          },
+          y1: {
+            position: 'right',
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    });
+  </script>
+  </div>
 </body>
 </html>
