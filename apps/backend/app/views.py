@@ -165,13 +165,6 @@ def import_page():
     return render_template("import.html")
 
 
-@views.route("/activity")
-def activity_view():
-    args = request.args
-    activity_id = args.get("id")
-    return render_template("activity.html", id=activity_id)
-
-
 @views.route("/import_summary", methods=['GET', 'POST'])
 def import_summary():
     form = ImportSummaryForm.ImportSummaryForm(request.form)
