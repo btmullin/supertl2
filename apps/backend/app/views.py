@@ -19,7 +19,7 @@ from trainingdata.activity import Activity
 from sqlalchemy import func, text
 from app.db.db import import_strava_data
 from .forms import ImportSummaryForm
-from .forms.EditExtraForm import EditExtraForm
+from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
@@ -194,7 +194,7 @@ def test():
     return render_template("test.html", activity=activity)
 
 @views.route("/activity/edit", methods=["GET", "POST"])
-def edit_extra():
+def edit_activity():
     next_url = request.args.get("next") or url_for("views.dashboard")
     activity_id = request.args.get("id")
     if not activity_id:
@@ -209,7 +209,7 @@ def edit_extra():
     activity_data = activity.data or {}
     summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
 
-    form = EditExtraForm()
+    form = EditActivityForm()
 
     # Populate select fields
     form.workoutTypeId.choices = [(0, "—")] + [
@@ -241,7 +241,7 @@ def edit_extra():
             form.notes.data = existing.notes
             form.tags.data = existing.tags
             form.isTraining.data = existing.isTraining if existing.isTraining is not None else 2
-        return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+        return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
         return redirect(next_url)
@@ -266,7 +266,7 @@ def edit_extra():
         flash("Metadata updated.")
         return redirect(next_url)
 
-    return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+    return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
 @views.route("/admin/import-strava")
 def import_strava():
