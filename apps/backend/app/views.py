@@ -81,7 +81,11 @@ def get_dashboard_context(week_offset=0):
     previous_week_end = end_of_week - timedelta(weeks=1)
     previous_activities = (
         sqla_db.session.query(StravaActivity)
-        .filter(func.date(StravaActivity.startDateTime).between(previous_week_start, previous_week_end))
+        .join(StravaActivity.training_log)  # Only join activities that have a training_log
+        .filter(
+            TrainingLogData.isTraining == 1,
+            func.date(StravaActivity.startDateTime).between(previous_week_start, previous_week_end)
+        )
         .order_by(StravaActivity.startDateTime)
         .all()
     )
@@ -276,7 +280,7 @@ def import_strava():
     import_strava_data()
 
     flash(f"Imported new activities.")
-    return redirect(url_for("views.dashboard"))
+    return redirect(url_for("views.activitylist"))
 
 @views.route("/activitylist")
 def activitylist():
