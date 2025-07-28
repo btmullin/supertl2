@@ -15,6 +15,10 @@ class StravaActivity(BaseModel):
     description = Column(String)
     elevation = Column(Integer)
     data = Column(JSON)
+    averageHeartRate = Column(Integer)
+    maxHeartRate = Column(Integer)
+    calories = Column(Integer)
+    averagePower = Column(Integer)
 
     training_log = relationship("TrainingLogData", back_populates="strava_activity", uselist=False)
 
