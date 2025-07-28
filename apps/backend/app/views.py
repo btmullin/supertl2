@@ -14,11 +14,8 @@ from flask import (
     current_app,
     flash,
 )
-from werkzeug.utils import secure_filename
-from trainingdata.activity import Activity
 from sqlalchemy import func, text
 from app.db.db import import_strava_data
-from .forms import ImportSummaryForm
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
