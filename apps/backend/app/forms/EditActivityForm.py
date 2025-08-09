@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, BooleanField, SelectField, HiddenField, SubmitField
 from wtforms.validators import Optional
 
-class EditExtraForm(FlaskForm):
+class EditActivityForm(FlaskForm):
     activityId = HiddenField("Activity ID")
 
     workoutTypeId = SelectField("Workout Type", coerce=int, validators=[Optional()])

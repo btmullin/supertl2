@@ -2,10 +2,9 @@
 
 Making pass #2 at creating a replacement for SportTracks 3.0.
 
-Instead of a QT app this time going to try some sort of webframework
-dockerized something or other.  Got way too sidetracked on version 1.0
-with how to make a GUI and never even got off the ground with actually
-getting a training log going.
+This round is a Flask application coupled with data extracted
+from Stava utilizing the [statistics-for-strava](https://github.com/robiningelbrecht/statistics-for-strava)
+utility.
 
 ## Links
 
@@ -18,6 +17,8 @@ getting a training log going.
 ## Usage
 
 ### Setup/Basic Use
+
+Edit the docker-compose.yml file to modify directories as necessary (statsforstrava import in particular)
 
 To setup the Docker container, in PowerShell:
 ```

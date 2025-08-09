@@ -11,7 +11,6 @@
 
 <div class="whole-body">
   <div class="section">
-    <h2>Edit Activity: {{ activityId }}</h2>
     <div style="display: flex; flex-direction: row; gap: 2em; flex-wrap: wrap;">
 
       <!-- Left: Strava Info -->
@@ -31,13 +30,14 @@
             <tr><th>Calories</th><td>{{ activity.calories or "—" }}</td></tr>
             <tr><th>Avg HR</th><td>{{ activity.averageHeartRate or "—" }}</td></tr>
             <tr><th>Max HR</th><td>{{ activity.maxHeartRate or "—" }}</td></tr>
-            <tr><th>Power</th><td>{{ activity.averagePower or "—" }}</td></tr>
+            <tr><th>Avg Power</th><td>{{ activity.averagePower or "—" }}</td></tr>
             <tr><th>Description</th><td>{{ activity.description or "—" }}</td></tr>
           </tbody>
         </table>
+        <p></p>
 
         {% if summary_polyline %}
-        <h4>Route Preview</h4>
+        <h4>Route</h4>
         <div id="map" style="height: 500px; margin-bottom: 1em; border-radius: 10px;"></div>
 
         <script>
@@ -205,7 +205,7 @@
                   display: true,
                   title: {
                     display: true,
-                    text: 'Seconds'
+                    text: 'Time (h:mm:ss)'
                   },
                   ticks: {
                     maxTicksLimit: 15,  // Reduce number of ticks
@@ -218,6 +218,12 @@
                   title: {
                     display: true,
                     text: 'Altitude (m)'
+                  },
+                  grid: {
+                    color: 'rgb(200, 200, 200, .25)'
+                  },
+                  ticks: {
+                    color: 'rgb(100, 100, 100)'
                   }
                 },
                 y_hr: {
@@ -225,6 +231,12 @@
                   title: {
                     display: true,
                     text: 'Heart Rate (bpm)'
+                  },
+                  grid: {
+                    color: 'rgb(200, 50, 50, .5)'
+                  },
+                  ticks: {
+                    color: 'rgb(200, 50, 50)'
                   }
                 }
               },

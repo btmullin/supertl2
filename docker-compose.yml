@@ -5,9 +5,9 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./db:/db           # ✅ bind mount for persistent, inspectable DB
-      - ../../statsforstrava/storage/database:/stravadb
-      - .:/app                 # Mount your source code into the container
+      - ./db:/db                                        # mount the database directory
+      - ../../statsforstrava/storage/database:/stravadb # mount where the statsforstrava database is stored
+      - .:/app                                          # mount the application code
     environment:
       FLASK_ENV: development   # Enables debug mode and auto-reload
       FLASK_DEBUG: 1

@@ -14,12 +14,9 @@ from flask import (
     current_app,
     flash,
 )
-from werkzeug.utils import secure_filename
-from trainingdata.activity import Activity
 from sqlalchemy import func, text
 from app.db.db import import_strava_data
-from .forms import ImportSummaryForm
-from .forms.EditExtraForm import EditExtraForm
+from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
@@ -145,63 +142,13 @@ def gear():
     return render_template("gear.html")
 
 
-@views.route("/import", methods=["GET", "POST"])
-def import_page():
-    if request.method == "POST":
-        # check if the post request has the file part
-        if "file" not in request.files:
-            flash("No file part")
-            return redirect(request.url)
-        file = request.files["file"]
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
-        if file.filename == "":
-            flash("No selected file")
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(current_app.config["UPLOAD_FOLDER"], filename))
-            return redirect(url_for("views.import_summary", file_name=filename))
-    return render_template("import.html")
-
-
-@views.route("/activity")
-def activity_view():
-    args = request.args
-    activity_id = args.get("id")
-    return render_template("activity.html", id=activity_id)
-
-
-@views.route("/import_summary", methods=['GET', 'POST'])
-def import_summary():
-    form = ImportSummaryForm.ImportSummaryForm(request.form)
-    if request.method == 'GET':
-        args = request.args
-        file_name = args.get("file_name")
-        form.activity = Activity(os.path.join(current_app.config["UPLOAD_FOLDER"], file_name))
-
-        return render_template("import_summary.html", activity=form.activity, form=form)
-    else:
-        # user pressed a button
-        if form.save.data:
-            print('Save button pressed', file=sys.stderr)
-            print(f'Description: {form.description.data}', file=sys.stderr)
-            print(f'Category: {form.category_field.data}', file=sys.stderr)
-            print(f'Activity info?: {form.activity.summary.distance_m}', file=sys.stderr)
-            # TODO - Here is where we can take the data from the activity and
-            # from the form and save it
-            # WONDER IF THERE IS A WAY TO NOT RECREATE THE ACTIVITY AGAIN....
-        elif form.cancel.data:
-            print('Cancel button pressed', file=sys.stderr)
-        return 'HELP ME'
-
 @views.route("/test")
 def test():
     activity = sqla_db.session.query(StravaActivity).first()
     return render_template("test.html", activity=activity)
 
 @views.route("/activity/edit", methods=["GET", "POST"])
-def edit_extra():
+def edit_activity():
     next_url = request.args.get("next") or url_for("views.dashboard")
     activity_id = request.args.get("id")
     if not activity_id:
@@ -216,7 +163,7 @@ def edit_extra():
     activity_data = activity.data or {}
     summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
 
-    form = EditExtraForm()
+    form = EditActivityForm()
 
     # Populate select fields
     form.workoutTypeId.choices = [(0, "—")] + [
@@ -248,7 +195,7 @@ def edit_extra():
             form.notes.data = existing.notes
             form.tags.data = existing.tags
             form.isTraining.data = existing.isTraining if existing.isTraining is not None else 2
-        return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+        return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
     if form.cancel.data:
         return redirect(next_url)
@@ -273,7 +220,7 @@ def edit_extra():
         flash("Metadata updated.")
         return redirect(next_url)
 
-    return render_template("edit_extra.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+    return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
 
 @views.route("/admin/import-strava")
 def import_strava():

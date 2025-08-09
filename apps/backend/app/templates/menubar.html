@@ -37,15 +37,6 @@
             {% endif %}
         </li>
         <li class="nav-item">
-            {% set disabled = true %}  {# currently no import view #}
-            {% if disabled %}
-              <span class="nav-link disabled" aria-disabled="true" tabindex="-1">Import</span>
-            {% else %}
-                <a class="nav-link {{ 'active' if current_path == url_for('views.import_page') else '' }}"
-                href="{{ url_for('views.import_page') }}">Import</a>
-            {% endif %}
-        </li>
-        <li class="nav-item">
           <a class="nav-link {{ 'active' if current_path == url_for('views.admin') else '' }}"
              href="{{ url_for('views.admin') }}">Admin</a>
       </li>
