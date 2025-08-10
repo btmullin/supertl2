@@ -20,6 +20,7 @@ from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
+from app.services.analytics import summarize_activities, bucket_daily
 
 PER_PAGE = 25
 
@@ -60,18 +61,9 @@ def get_dashboard_context(week_offset=0):
 
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
-    daily_summaries = {
-        day: {
-            "total_distance": sum(a.distance for a in activities_by_day[day] if a.distance is not None),
-            "total_duration": sum(a.movingTimeInSeconds for a in activities_by_day[day] if a.movingTimeInSeconds is not None),
-        }
-        for day in days
-    }
+    daily_summaries = bucket_daily(activities)
 
-    week_summary = {
-        "total_distance": sum(d["total_distance"] for d in daily_summaries.values()),
-        "total_duration": sum(d["total_duration"] for d in daily_summaries.values()),
-    }
+    week_summary = summarize_activities(activities)
 
     # Get previous week summaries
     previous_week_start = start_of_week - timedelta(weeks=1)
@@ -86,24 +78,8 @@ def get_dashboard_context(week_offset=0):
         .order_by(StravaActivity.startDateTime)
         .all()
     )
-    previous_activities_by_day = defaultdict(list)
-    for a in previous_activities:
-        day = a.startDateTime.date()
-        previous_activities_by_day[day].append(a)
 
-    previous_days = [previous_week_start + timedelta(days=i) for i in range(7)]
-    previous_daily_summaries = {
-        day: {
-            "total_distance": sum(a.distance for a in previous_activities_by_day[day] if a.distance is not None),
-            "total_duration": sum(a.movingTimeInSeconds for a in previous_activities_by_day[day] if a.movingTimeInSeconds is not None),
-        }
-        for day in previous_days
-    }
-
-    previous_week_summary = {
-        "total_distance": sum(d["total_distance"] for d in previous_daily_summaries.values()),
-        "total_duration": sum(d["total_duration"] for d in previous_daily_summaries.values()),
-    }
+    previous_week_summary = summarize_activities(previous_activities)
 
     return {
         "start_of_week": start_of_week,
@@ -247,6 +223,28 @@ def activitylist():
     total_pages = (total + PER_PAGE - 1) // PER_PAGE
     
     return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)
+
+@views.route("/summary")
+def summary_view():
+    # Fetch activities in date range
+    activities = (
+        sqla_db.session.query(StravaActivity)
+        .join(StravaActivity.training_log)  # Only join activities that have a training_log
+        .filter(
+            TrainingLogData.isTraining == 1
+        )
+        .filter(
+            StravaActivity.startDateTime >= datetime(2025, 5, 1))
+        # .filter(TrainingLogData.categoryId.in_([6,7]))
+        .filter(StravaActivity.movingTimeInSeconds >= 180 * 60)
+        .order_by(StravaActivity.startDateTime)
+        .all()
+    )
+
+    summary = summarize_activities(activities)
+
+    return render_template("summary.html", activities=activities, summary=summary)
+
 
 @views.route("/addcategory", methods=["GET", "POST"])
 def add_category():

@@ -1,0 +1,31 @@
+{% extends 'base.html' %} {% block content %}
+<div class="whole-body">
+  <div class="section">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Date/Time</th>
+          <th>Sport</th>
+          <th>Name</th>
+          <th>Distance</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      {% for activity in activities %}
+      <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
+          <td class="col-date-time">{{ activity.startDateTime | pretty_datetime }}</td>
+          <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
+          <td class="col-name">{{ activity.name }}</td>
+          <td class="col-distance">{{ activity.distance | km }}</td>
+          <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+      </tr>
+      {% endfor %}
+      <!-- Add the totals row -->
+      <tr class="summary-row-border-header">
+        <td colspan="3">{{ summary.count }} Activities</td>
+        <td class="col-distance">{{ summary.total_distance | km }}</td>
+        <td class="col-time">{{ summary.total_moving_s | format_duration }}</td>
+      </tr>
+    </table>
+  </div>
+{% endblock %}

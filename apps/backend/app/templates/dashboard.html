@@ -47,7 +47,7 @@
               <td class="col-date">{{ day.strftime('%A') }}</td>
               <td colspan="2"></td>
               <td class="col-distance-summary">{{ daily_summaries[day].total_distance | km }}</td>
-              <td class="col-time-summary">{{ daily_summaries[day].total_duration | format_duration }}</td>
+              <td class="col-time-summary">{{ daily_summaries[day].total_moving_s | format_duration }}</td>
             </tr>
             {% for activity in activities %}
             <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
@@ -63,12 +63,12 @@
         <tr class="summary-row-border-header">
           <td colspan="3">This week</td>
           <td class="col-distance">{{ week_summary.total_distance | km }}</td>
-          <td class="col-time">{{ week_summary.total_duration | format_duration }}</td>
+          <td class="col-time">{{ week_summary.total_moving_s | format_duration }}</td>
         </tr>
         <tr>
           <td colspan="3">Previous week</td>
           <td class="col-distance">{{ previous_week_summary.total_distance | km }}</td>
-          <td class="col-time">{{ previous_week_summary.total_duration | format_duration }}</td>
+          <td class="col-time">{{ previous_week_summary.total_moving_s | format_duration }}</td>
       </tbody> 
     </table>
   </div>
