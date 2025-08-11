@@ -1,5 +1,39 @@
-{% extends 'base.html' %} {% block content %}
+{# app/templates/summary.html #}
+{% extends "base.html" %}
+{% block content %}
 <div class="whole-body">
+  {% if not request.args %}
+  <div class="section">
+    <form method="get" action="{{ url_for('views.summary_list') }}" class="filters">
+      <div>
+        <label>{{ form.categories.label }}</label>
+        {{ form.categories(size=6, multiple=True) }}
+      </div>
+
+      <div>
+        <label>{{ form.sport_types.label }}</label>
+        {{ form.sport_types(size=6, multiple=True) }}
+      </div>
+
+      <div>
+        <label>{{ form.is_training.label }}</label>
+        {{ form.is_training() }}
+      </div>
+
+      <div>
+        <label>{{ form.date_start.label }}</label>
+        {{ form.date_start(type="date") }}
+        <label style="margin-left: .5rem">{{ form.date_end.label }}</label>
+        {{ form.date_end(type="date") }}
+      </div>
+
+      <div style="margin-top: .5rem;">
+        {{ form.submit(class_="btn") }}
+        <a class="btn btn-secondary" href="{{ url_for('views.summary_list') }}">Reset</a>
+      </div>
+    </form>
+  </div>
+  {% else %}
   <div class="section">
     <table class="styled-table">
       <thead>
@@ -28,4 +62,8 @@
       </tr>
     </table>
   </div>
+  {% endif %}
+</div>
+
+
 {% endblock %}

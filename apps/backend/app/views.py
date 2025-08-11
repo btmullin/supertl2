@@ -15,9 +15,11 @@ from flask import (
     flash,
 )
 from sqlalchemy import func, text
+from sqlalchemy.orm import joinedload
 from app.db.db import import_strava_data
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
+from .forms.SummaryForm import SummaryFilterForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
 from app.services.analytics import summarize_activities, bucket_daily
@@ -224,27 +226,69 @@ def activitylist():
     
     return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)
 
-@views.route("/summary")
-def summary_view():
-    # Fetch activities in date range
-    activities = (
-        sqla_db.session.query(StravaActivity)
-        .join(StravaActivity.training_log)  # Only join activities that have a training_log
-        .filter(
-            TrainingLogData.isTraining == 1
-        )
-        .filter(
-            StravaActivity.startDateTime >= datetime(2025, 5, 1))
-        # .filter(TrainingLogData.categoryId.in_([6,7]))
-        .filter(StravaActivity.movingTimeInSeconds >= 180 * 60)
-        .order_by(StravaActivity.startDateTime)
+@views.route("/summary", methods=["GET"])
+def summary_list():
+    # Bind from querystring; for GET filters we typically disable CSRF
+    form = SummaryFilterForm(request.args, meta={"csrf": False})
+
+    # Populate dynamic choices
+    form.categories.choices = [
+        (c.id, c.name) for c in sqla_db.session.query(Category).order_by(Category.name).all()
+    ]
+    # Distinct sport types (skip None/blank)
+    sport_rows = (
+        sqla_db.session.query(StravaActivity.sportType)
+        .distinct()
+        .order_by(StravaActivity.sportType)
         .all()
     )
+    form.sport_types.choices = [(s[0], s[0]) for s in sport_rows if s[0]]
 
+    # Build query
+    q = sqla_db.session.query(StravaActivity).options(
+        joinedload(StravaActivity.training_log)  # avoid N+1 when showing tags/category
+    )
+
+    joined_tl = False
+
+    # Categories (requires join)
+    if form.categories.data:
+        q = q.join(StravaActivity.training_log)
+        joined_tl = True
+        q = q.filter(TrainingLogData.categoryId.in_(form.categories.data))
+
+    # Training flag (requires join)
+    if form.is_training.data in ("1", "0"):
+        if not joined_tl:
+            q = q.join(StravaActivity.training_log)
+            joined_tl = True
+        q = q.filter(TrainingLogData.isTraining == int(form.is_training.data))
+
+    # Sport types
+    if form.sport_types.data:
+        q = q.filter(StravaActivity.sportType.in_(form.sport_types.data))
+
+    # Date range (inclusive of end date)
+    if form.date_start.data:
+        start_dt = datetime.combine(form.date_start.data, time.min)
+        q = q.filter(StravaActivity.startDateTime >= start_dt)
+    if form.date_end.data:
+        # Use exclusive upper bound midnight next day to include the whole end date
+        end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
+        q = q.filter(StravaActivity.startDateTime < end_dt)
+
+    # Order & paginate
+    q = q.order_by(StravaActivity.startDateTime.desc())
+
+    activities = q.all()
     summary = summarize_activities(activities)
 
-    return render_template("summary.html", activities=activities, summary=summary)
-
+    return render_template(
+        "summary.html",
+        form=form,
+        activities=activities,
+        summary=summary,
+    )
 
 @views.route("/addcategory", methods=["GET", "POST"])
 def add_category():
