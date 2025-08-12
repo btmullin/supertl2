@@ -5,7 +5,6 @@ from wtforms.validators import Optional
 
 class SummaryFilterForm(FlaskForm):
     categories = SelectMultipleField("Categories", coerce=int, validators=[Optional()])
-    sport_types = SelectMultipleField("Sport types", validators=[Optional()])
     is_training = SelectField(
         "Training only",
         choices=[("", "Any"), ("1", "Yes"), ("0", "No")],

@@ -3,7 +3,7 @@
 import os
 import sys
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from collections import defaultdict
 from flask import (
     Blueprint,
@@ -231,57 +231,63 @@ def summary_list():
     # Bind from querystring; for GET filters we typically disable CSRF
     form = SummaryFilterForm(request.args, meta={"csrf": False})
 
-    # Populate dynamic choices
-    form.categories.choices = [
-        (c.id, c.name) for c in sqla_db.session.query(Category).order_by(Category.name).all()
-    ]
-    # Distinct sport types (skip None/blank)
-    sport_rows = (
-        sqla_db.session.query(StravaActivity.sportType)
-        .distinct()
-        .order_by(StravaActivity.sportType)
-        .all()
-    )
-    form.sport_types.choices = [(s[0], s[0]) for s in sport_rows if s[0]]
+    show_form = not bool(request.args)
 
-    # Build query
-    q = sqla_db.session.query(StravaActivity).options(
-        joinedload(StravaActivity.training_log)  # avoid N+1 when showing tags/category
-    )
+    if show_form:
+        # Recursive category path query
+        category_paths = sqla_db.session.execute(text("""
+            WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
+                SELECT id, name, parent_id, name
+                FROM Category
+                WHERE parent_id IS NULL
+                UNION ALL
+                SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
+                FROM Category c
+                JOIN category_path cp ON c.parent_id = cp.id
+            )
+            SELECT id, full_path FROM category_path
+            ORDER BY full_path
+        """)).fetchall()
+        form.categories.choices = [(row.id, row.full_path) for row in category_paths]
 
-    joined_tl = False
+        activities = None
+        summary = None
 
-    # Categories (requires join)
-    if form.categories.data:
-        q = q.join(StravaActivity.training_log)
-        joined_tl = True
-        q = q.filter(TrainingLogData.categoryId.in_(form.categories.data))
+    else:
+        # Build query
+        q = sqla_db.session.query(StravaActivity).options(
+            joinedload(StravaActivity.training_log)  # avoid N+1 when showing tags/category
+        )
 
-    # Training flag (requires join)
-    if form.is_training.data in ("1", "0"):
-        if not joined_tl:
+        joined_tl = False
+
+        # Categories (requires join)
+        if form.categories.data:
             q = q.join(StravaActivity.training_log)
             joined_tl = True
-        q = q.filter(TrainingLogData.isTraining == int(form.is_training.data))
+            q = q.filter(TrainingLogData.categoryId.in_(form.categories.data))
 
-    # Sport types
-    if form.sport_types.data:
-        q = q.filter(StravaActivity.sportType.in_(form.sport_types.data))
+        # Training flag (requires join)
+        if form.is_training.data in ("1", "0"):
+            if not joined_tl:
+                q = q.join(StravaActivity.training_log)
+                joined_tl = True
+            q = q.filter(TrainingLogData.isTraining == int(form.is_training.data))
 
-    # Date range (inclusive of end date)
-    if form.date_start.data:
-        start_dt = datetime.combine(form.date_start.data, time.min)
-        q = q.filter(StravaActivity.startDateTime >= start_dt)
-    if form.date_end.data:
-        # Use exclusive upper bound midnight next day to include the whole end date
-        end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
-        q = q.filter(StravaActivity.startDateTime < end_dt)
+        # Date range (inclusive of end date)
+        if form.date_start.data:
+            start_dt = datetime.combine(form.date_start.data, time.min)
+            q = q.filter(StravaActivity.startDateTime >= start_dt)
+        if form.date_end.data:
+            # Use exclusive upper bound midnight next day to include the whole end date
+            end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
+            q = q.filter(StravaActivity.startDateTime < end_dt)
 
-    # Order & paginate
-    q = q.order_by(StravaActivity.startDateTime.desc())
+        # Order & paginate
+        q = q.order_by(StravaActivity.startDateTime.asc())
 
-    activities = q.all()
-    summary = summarize_activities(activities)
+        activities = q.all()
+        summary = summarize_activities(activities)
 
     return render_template(
         "summary.html",
