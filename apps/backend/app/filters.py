@@ -120,6 +120,9 @@ def displaySportOrCategory(activity):
 
     return activity.sportType
 
+def categoryById(category_id):
+    return category_id  # Placeholder for actual implementation to fetch category by ID
+
 def register_filters(app):
     """
     Registers the formatting utility functions as Jinja2 filters in a Flask application.
@@ -133,3 +136,4 @@ def register_filters(app):
     app.jinja_env.filters["time_only"] = format_timeonly
     app.jinja_env.filters["describe_object"] = describe_object
     app.jinja_env.filters["displaySportOrCategory"] = displaySportOrCategory
+    app.jinja_env.filters["category_by_id"] = categoryById
