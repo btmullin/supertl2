@@ -252,6 +252,7 @@ def summary_list():
 
         activities = None
         summary = None
+        category_summary = None
 
     else:
         # Build query

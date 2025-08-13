@@ -78,7 +78,7 @@
       </thead>
       {% for cat, cat_summary in category_summary.items() %}
       <tr>
-          <td class>{{ cat | category_by_id }}</td>
+          <td class>{{ cat | category_path }}</td>
           <td class="col-distance">{{ cat_summary.total_distance | km }}</td>
           <td class="col-time">{{ cat_summary.total_moving_s | format_duration }}</td>
       </tr>
