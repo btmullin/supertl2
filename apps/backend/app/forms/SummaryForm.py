@@ -9,7 +9,7 @@ class SummaryFilterForm(FlaskForm):
         "Training only",
         choices=[("", "Any"), ("1", "Yes"), ("0", "No")],
         validators=[Optional()],
-        default=""
+        default="1"
     )
     date_start = DateField("From", format="%Y-%m-%d", validators=[Optional()])
     date_end = DateField("To", format="%Y-%m-%d", validators=[Optional()])
