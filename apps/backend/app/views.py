@@ -22,7 +22,7 @@ from .forms.CategoryForm import CategoryForm
 from .forms.SummaryForm import SummaryFilterForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
-from app.services.analytics import summarize_activities, bucket_daily
+from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
 
 PER_PAGE = 25
 
@@ -288,12 +288,14 @@ def summary_list():
 
         activities = q.all()
         summary = summarize_activities(activities)
+        category_summary = summarize_by(activities, group_by_category_id)
 
     return render_template(
         "summary.html",
         form=form,
         activities=activities,
         summary=summary,
+        category_summary=category_summary,
     )
 
 @views.route("/addcategory", methods=["GET", "POST"])
