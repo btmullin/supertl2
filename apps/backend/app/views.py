@@ -23,6 +23,7 @@ from .forms.SummaryForm import SummaryFilterForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
 from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
+from .filters import category_path_filter
 
 PER_PAGE = 25
 
@@ -253,9 +254,11 @@ def summary_list():
         activities = None
         summary = None
         category_summary = None
+        summary_filter = None
 
     else:
         # Build query
+        summary_filter = []
         q = sqla_db.session.query(StravaActivity).options(
             joinedload(StravaActivity.training_log)  # avoid N+1 when showing tags/category
         )
@@ -264,12 +267,14 @@ def summary_list():
 
         # Categories (requires join)
         if form.categories.data:
+            summary_filter.append(("Categories", ", ".join(category_path_filter(c) for c in form.categories.data)))
             q = q.join(StravaActivity.training_log)
             joined_tl = True
             q = q.filter(TrainingLogData.categoryId.in_(form.categories.data))
 
         # Training flag (requires join)
         if form.is_training.data in ("1", "0"):
+            summary_filter.append(("Is Training", ("Yes" if form.is_training.data == "1" else "No")))
             if not joined_tl:
                 q = q.join(StravaActivity.training_log)
                 joined_tl = True
@@ -277,14 +282,16 @@ def summary_list():
 
         # Date range (inclusive of end date)
         if form.date_start.data:
+            summary_filter.append(("From", form.date_start.data.strftime("%Y-%m-%d")))
             start_dt = datetime.combine(form.date_start.data, time.min)
             q = q.filter(StravaActivity.startDateTime >= start_dt)
         if form.date_end.data:
+            summary_filter.append(("To", form.date_end.data.strftime("%Y-%m-%d")))
             # Use exclusive upper bound midnight next day to include the whole end date
             end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
             q = q.filter(StravaActivity.startDateTime < end_dt)
 
-        # Order & paginate
+        # Order
         q = q.order_by(StravaActivity.startDateTime.asc())
 
         activities = q.all()
@@ -297,6 +304,7 @@ def summary_list():
         activities=activities,
         summary=summary,
         category_summary=category_summary,
+        summary_filter=summary_filter,
     )
 
 @views.route("/addcategory", methods=["GET", "POST"])

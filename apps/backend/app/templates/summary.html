@@ -37,8 +37,22 @@
   {% else %}
   <!-- Display the results -->
   <div class="section">
-    <p>Put the filter details here</p>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Filter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      {% for f in summary_filter %}
+        <tr>
+          <td>{{ f[0] }}</td>
+          <td>{{ f[1] }}</td>
+        </tr>
+      {% endfor %}
+    </table>
   </div>
+  <hr>
   <div class="section">
     <table class="styled-table">
       <thead>
@@ -67,6 +81,7 @@
       </tr>
     </table>
   </div>
+  <hr>
   <div class="section">
     <table class="styled-table">
       <thead>
