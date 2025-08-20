@@ -206,6 +206,31 @@ label {
   padding-left: 0.5em;
 }
 
+/* Make sure the form spans full width */
+.filters { width: 100%; }
+
+/* Side-by-side date fields; leftover space flexes */
+.filters .date-range.left-fill {
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;     /* nice vertical alignment when labels are above */
+  flex-wrap: nowrap;    /* keep on one line; change to wrap if you want stacking on small screens */
+}
+
+.filters .date-range.left-fill .field {
+  flex: 0 0 auto;       /* fields size to content, do not grow */
+}
+
+.filters .date-range.left-fill .flex-spacer {
+  flex: 1 1 auto;       /* consumes the remaining space on the right */
+  min-width: 0;
+}
+
+.filters .date-range.left-fill label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
 input[type="submit"], input[type="cancel"] {
   background-color: var(--theme-color-accent);
   color: var(--theme-font-color);

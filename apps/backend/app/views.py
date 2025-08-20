@@ -3,7 +3,7 @@
 import os
 import sys
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from collections import defaultdict
 from flask import (
     Blueprint,
@@ -15,11 +15,15 @@ from flask import (
     flash,
 )
 from sqlalchemy import func, text
+from sqlalchemy.orm import joinedload
 from app.db.db import import_strava_data
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
+from .forms.ActivityQueryForm import ActivityQueryFilterForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
+from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
+from .filters import category_path_filter
 
 PER_PAGE = 25
 
@@ -60,18 +64,9 @@ def get_dashboard_context(week_offset=0):
 
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
-    daily_summaries = {
-        day: {
-            "total_distance": sum(a.distance for a in activities_by_day[day] if a.distance is not None),
-            "total_duration": sum(a.movingTimeInSeconds for a in activities_by_day[day] if a.movingTimeInSeconds is not None),
-        }
-        for day in days
-    }
+    daily_summaries = bucket_daily(activities)
 
-    week_summary = {
-        "total_distance": sum(d["total_distance"] for d in daily_summaries.values()),
-        "total_duration": sum(d["total_duration"] for d in daily_summaries.values()),
-    }
+    week_summary = summarize_activities(activities)
 
     # Get previous week summaries
     previous_week_start = start_of_week - timedelta(weeks=1)
@@ -86,24 +81,8 @@ def get_dashboard_context(week_offset=0):
         .order_by(StravaActivity.startDateTime)
         .all()
     )
-    previous_activities_by_day = defaultdict(list)
-    for a in previous_activities:
-        day = a.startDateTime.date()
-        previous_activities_by_day[day].append(a)
 
-    previous_days = [previous_week_start + timedelta(days=i) for i in range(7)]
-    previous_daily_summaries = {
-        day: {
-            "total_distance": sum(a.distance for a in previous_activities_by_day[day] if a.distance is not None),
-            "total_duration": sum(a.movingTimeInSeconds for a in previous_activities_by_day[day] if a.movingTimeInSeconds is not None),
-        }
-        for day in previous_days
-    }
-
-    previous_week_summary = {
-        "total_distance": sum(d["total_distance"] for d in previous_daily_summaries.values()),
-        "total_duration": sum(d["total_duration"] for d in previous_daily_summaries.values()),
-    }
+    previous_week_summary = summarize_activities(previous_activities)
 
     return {
         "start_of_week": start_of_week,
@@ -247,6 +226,86 @@ def activitylist():
     total_pages = (total + PER_PAGE - 1) // PER_PAGE
     
     return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)
+
+@views.route("/query", methods=["GET"])
+def activity_query():
+    # Bind from querystring; for GET filters we typically disable CSRF
+    form = ActivityQueryFilterForm(request.args, meta={"csrf": False})
+
+    show_form = not bool(request.args)
+
+    if show_form:
+        # Recursive category path query
+        category_paths = sqla_db.session.execute(text("""
+            WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
+                SELECT id, name, parent_id, name
+                FROM Category
+                WHERE parent_id IS NULL
+                UNION ALL
+                SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name
+                FROM Category c
+                JOIN category_path cp ON c.parent_id = cp.id
+            )
+            SELECT id, full_path FROM category_path
+            ORDER BY full_path
+        """)).fetchall()
+        form.categories.choices = [(row.id, row.full_path) for row in category_paths]
+
+        activities = None
+        summary = None
+        category_summary = None
+        query_filter = None
+
+    else:
+        # Build query
+        query_filter = []
+        q = sqla_db.session.query(StravaActivity).options(
+            joinedload(StravaActivity.training_log)  # avoid N+1 when showing tags/category
+        )
+
+        joined_tl = False
+
+        # Categories (requires join)
+        if form.categories.data:
+            query_filter.append(("Categories", ", ".join(category_path_filter(c) for c in form.categories.data)))
+            q = q.join(StravaActivity.training_log)
+            joined_tl = True
+            q = q.filter(TrainingLogData.categoryId.in_(form.categories.data))
+
+        # Training flag (requires join)
+        if form.is_training.data in ("1", "0"):
+            query_filter.append(("Is Training", ("Yes" if form.is_training.data == "1" else "No")))
+            if not joined_tl:
+                q = q.join(StravaActivity.training_log)
+                joined_tl = True
+            q = q.filter(TrainingLogData.isTraining == int(form.is_training.data))
+
+        # Date range (inclusive of end date)
+        if form.date_start.data:
+            query_filter.append(("From", form.date_start.data.strftime("%Y-%m-%d")))
+            start_dt = datetime.combine(form.date_start.data, time.min)
+            q = q.filter(StravaActivity.startDateTime >= start_dt)
+        if form.date_end.data:
+            query_filter.append(("To", form.date_end.data.strftime("%Y-%m-%d")))
+            # Use exclusive upper bound midnight next day to include the whole end date
+            end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
+            q = q.filter(StravaActivity.startDateTime < end_dt)
+
+        # Order
+        q = q.order_by(StravaActivity.startDateTime.asc())
+
+        activities = q.all()
+        summary = summarize_activities(activities)
+        category_summary = summarize_by(activities, group_by_category_id)
+
+    return render_template(
+        "query.html",
+        form=form,
+        activities=activities,
+        summary=summary,
+        category_summary=category_summary,
+        query_filter=query_filter,
+    )
 
 @views.route("/addcategory", methods=["GET", "POST"])
 def add_category():

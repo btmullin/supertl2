@@ -20,7 +20,16 @@ Functions:
       in a Flask application's Jinja environment.
 """
 
-from datetime import datetime
+from flask import g
+from .services.category_paths import build_category_cache, category_full_path_from_id
+from .models.category import Category
+from .db.base import sqla_db
+
+def _get_category_cache():
+    cache = getattr(g, "_category_cache", None)
+    if cache is None:
+        cache = g._category_cache = build_category_cache(sqla_db.session)
+    return cache
 
 def format_duration(seconds):
     """
@@ -120,7 +129,17 @@ def displaySportOrCategory(activity):
 
     return activity.sportType
 
+def category_path_filter(cat_or_id, sep=" : "):
+    # If a Category object is provided, use its method (already in your model)
+    if isinstance(cat_or_id, Category):
+        return cat_or_id.full_path()
+    # Otherwise treat as an id
+    cache = _get_category_cache()
+    return category_full_path_from_id(cat_or_id, cache, sep=sep)
+
 def register_filters(app):
+    # Deferred import to avoid circular import at module import time
+    
     """
     Registers the formatting utility functions as Jinja2 filters in a Flask application.
 
@@ -133,3 +152,4 @@ def register_filters(app):
     app.jinja_env.filters["time_only"] = format_timeonly
     app.jinja_env.filters["describe_object"] = describe_object
     app.jinja_env.filters["displaySportOrCategory"] = displaySportOrCategory
+    app.jinja_env.filters["category_path"] = category_path_filter

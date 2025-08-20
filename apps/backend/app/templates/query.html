@@ -1,0 +1,107 @@
+{# app/templates/query.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="whole-body">
+  {% if not request.args %}
+  <!-- Display the form -->
+  <div class="section">
+    <form method="get" action="{{ url_for('views.activity_query') }}" class="filters">
+      <div>
+        <label>{{ form.categories.label }}</label>
+        {{ form.categories(size=6, multiple=True) }}
+      </div>
+
+      <div>
+        <label>{{ form.is_training.label }}</label>
+        {{ form.is_training() }}
+      </div>
+
+    <div class="date-range left-fill">
+      <div class="field">
+        <label>{{ form.date_start.label }}</label>
+        {{ form.date_start(type="date") }}
+      </div>
+      <div class="field">
+        <label>{{ form.date_end.label }}</label>
+        {{ form.date_end(type="date") }}
+      </div>
+        <div class="flex-spacer" aria-hidden="true"></div>
+      </div>
+
+      <div style="margin-top: .5rem;">
+        {{ form.submit(class_="btn") }}
+        <a class="btn btn-secondary" href="{{ url_for('views.activity_query') }}">Reset</a>
+      </div>
+    </form>
+  </div>
+  {% else %}
+  <!-- Display the results -->
+  <div class="section">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Filter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      {% for f in query_filter %}
+        <tr>
+          <td>{{ f[0] }}</td>
+          <td>{{ f[1] }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <hr>
+  <div class="section">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Date/Time</th>
+          <th>Sport</th>
+          <th>Name</th>
+          <th>Distance</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      {% for activity in activities %}
+      <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
+          <td class="col-date-time">{{ activity.startDateTime | pretty_datetime }}</td>
+          <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
+          <td class="col-name">{{ activity.name }}</td>
+          <td class="col-distance">{{ activity.distance | km }}</td>
+          <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+      </tr>
+      {% endfor %}
+      <!-- Add the totals row -->
+      <tr class="summary-row-border-header">
+        <td colspan="3">{{ summary.count }} Activities</td>
+        <td class="col-distance">{{ summary.total_distance | km }}</td>
+        <td class="col-time">{{ summary.total_moving_s | format_duration }}</td>
+      </tr>
+    </table>
+  </div>
+  <hr>
+  <div class="section">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Distance</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      {% for cat, cat_summary in category_summary.items() %}
+      <tr>
+          <td class>{{ cat | category_path }}</td>
+          <td class="col-distance">{{ cat_summary.total_distance | km }}</td>
+          <td class="col-time">{{ cat_summary.total_moving_s | format_duration }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+
+{% endblock %}
