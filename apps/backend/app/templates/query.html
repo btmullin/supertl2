@@ -1,11 +1,11 @@
-{# app/templates/summary.html #}
+{# app/templates/query.html #}
 {% extends "base.html" %}
 {% block content %}
 <div class="whole-body">
   {% if not request.args %}
   <!-- Display the form -->
   <div class="section">
-    <form method="get" action="{{ url_for('views.summary_list') }}" class="filters">
+    <form method="get" action="{{ url_for('views.activity_query') }}" class="filters">
       <div>
         <label>{{ form.categories.label }}</label>
         {{ form.categories(size=6, multiple=True) }}
@@ -30,7 +30,7 @@
 
       <div style="margin-top: .5rem;">
         {{ form.submit(class_="btn") }}
-        <a class="btn btn-secondary" href="{{ url_for('views.summary_list') }}">Reset</a>
+        <a class="btn btn-secondary" href="{{ url_for('views.activity_query') }}">Reset</a>
       </div>
     </form>
   </div>
@@ -44,7 +44,7 @@
           <th>Value</th>
         </tr>
       </thead>
-      {% for f in summary_filter %}
+      {% for f in query_filter %}
         <tr>
           <td>{{ f[0] }}</td>
           <td>{{ f[1] }}</td>

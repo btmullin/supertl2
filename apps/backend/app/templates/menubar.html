@@ -10,8 +10,8 @@
                href="{{ url_for('views.activitylist') }}">Activity List</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if current_path == url_for('views.summary_list') else '' }}"
-                href="{{ url_for('views.summary_list') }}">Summary</a>
+            <a class="nav-link {{ 'active' if current_path == url_for('views.activity_query') else '' }}"
+                href="{{ url_for('views.activity_query') }}">Activity Query</a>
         </li>
         <li class="nav-item">
             {% set disabled = true %}  {# currently no calendar view #}

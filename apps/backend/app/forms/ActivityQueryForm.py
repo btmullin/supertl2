@@ -3,7 +3,7 @@ from flask_wtf import FlaskForm
 from wtforms import SelectMultipleField, SelectField, DateField, SubmitField
 from wtforms.validators import Optional
 
-class SummaryFilterForm(FlaskForm):
+class ActivityQueryFilterForm(FlaskForm):
     categories = SelectMultipleField("Categories", coerce=int, validators=[Optional()])
     is_training = SelectField(
         "Training only",

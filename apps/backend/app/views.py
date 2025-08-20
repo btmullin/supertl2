@@ -19,7 +19,7 @@ from sqlalchemy.orm import joinedload
 from app.db.db import import_strava_data
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
-from .forms.SummaryForm import SummaryFilterForm
+from .forms.ActivityQueryForm import ActivityQueryFilterForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
 from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
@@ -227,10 +227,10 @@ def activitylist():
     
     return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)
 
-@views.route("/summary", methods=["GET"])
-def summary_list():
+@views.route("/query", methods=["GET"])
+def activity_query():
     # Bind from querystring; for GET filters we typically disable CSRF
-    form = SummaryFilterForm(request.args, meta={"csrf": False})
+    form = ActivityQueryFilterForm(request.args, meta={"csrf": False})
 
     show_form = not bool(request.args)
 
@@ -254,11 +254,11 @@ def summary_list():
         activities = None
         summary = None
         category_summary = None
-        summary_filter = None
+        query_filter = None
 
     else:
         # Build query
-        summary_filter = []
+        query_filter = []
         q = sqla_db.session.query(StravaActivity).options(
             joinedload(StravaActivity.training_log)  # avoid N+1 when showing tags/category
         )
@@ -267,14 +267,14 @@ def summary_list():
 
         # Categories (requires join)
         if form.categories.data:
-            summary_filter.append(("Categories", ", ".join(category_path_filter(c) for c in form.categories.data)))
+            query_filter.append(("Categories", ", ".join(category_path_filter(c) for c in form.categories.data)))
             q = q.join(StravaActivity.training_log)
             joined_tl = True
             q = q.filter(TrainingLogData.categoryId.in_(form.categories.data))
 
         # Training flag (requires join)
         if form.is_training.data in ("1", "0"):
-            summary_filter.append(("Is Training", ("Yes" if form.is_training.data == "1" else "No")))
+            query_filter.append(("Is Training", ("Yes" if form.is_training.data == "1" else "No")))
             if not joined_tl:
                 q = q.join(StravaActivity.training_log)
                 joined_tl = True
@@ -282,11 +282,11 @@ def summary_list():
 
         # Date range (inclusive of end date)
         if form.date_start.data:
-            summary_filter.append(("From", form.date_start.data.strftime("%Y-%m-%d")))
+            query_filter.append(("From", form.date_start.data.strftime("%Y-%m-%d")))
             start_dt = datetime.combine(form.date_start.data, time.min)
             q = q.filter(StravaActivity.startDateTime >= start_dt)
         if form.date_end.data:
-            summary_filter.append(("To", form.date_end.data.strftime("%Y-%m-%d")))
+            query_filter.append(("To", form.date_end.data.strftime("%Y-%m-%d")))
             # Use exclusive upper bound midnight next day to include the whole end date
             end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
             q = q.filter(StravaActivity.startDateTime < end_dt)
@@ -299,12 +299,12 @@ def summary_list():
         category_summary = summarize_by(activities, group_by_category_id)
 
     return render_template(
-        "summary.html",
+        "query.html",
         form=form,
         activities=activities,
         summary=summary,
         category_summary=category_summary,
-        summary_filter=summary_filter,
+        query_filter=query_filter,
     )
 
 @views.route("/addcategory", methods=["GET", "POST"])
