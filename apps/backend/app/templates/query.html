@@ -16,17 +16,27 @@
         {{ form.is_training() }}
       </div>
 
-    <div class="date-range left-fill">
-      <div class="field">
-        <label>{{ form.date_start.label }}</label>
-        {{ form.date_start(type="date") }}
-      </div>
-      <div class="field">
-        <label>{{ form.date_end.label }}</label>
-        {{ form.date_end(type="date") }}
-      </div>
+      <div class="date-range left-fill">
+        <div class="field">
+          <label>{{ form.date_start.label }}</label>
+          {{ form.date_start(type="date") }}
+        </div>
+        <div class="field">
+          <label>{{ form.date_end.label }}</label>
+          {{ form.date_end(type="date") }}
+        </div>
         <div class="flex-spacer" aria-hidden="true"></div>
       </div>
+
+      <div>
+        <label>{{ form.min_time.label }}</label>
+        {{ form.min_time(size=6) }}
+      </div>
+      <div>
+        <label>{{ form.max_time.label }}</label>
+        {{ form.max_time(size=6) }}
+      </div>
+
 
       <div style="margin-top: .5rem;">
         {{ form.submit(class_="btn") }}

@@ -291,6 +291,13 @@ def activity_query():
             end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
             q = q.filter(StravaActivity.startDateTime < end_dt)
 
+        if form.min_time.data:
+            query_filter.append(("Min Time (minutes)", str(form.min_time.data)))
+            q = q.filter(StravaActivity.movingTimeInSeconds >= form.min_time.data * 60)
+        if form.max_time.data:
+            query_filter.append(("Max Time (minutes)", str(form.max_time.data)))
+            q = q.filter(StravaActivity.movingTimeInSeconds <= form.max_time.data * 60)
+
         # Order
         q = q.order_by(StravaActivity.startDateTime.asc())
 
