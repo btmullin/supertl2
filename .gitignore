@@ -17,3 +17,9 @@ uploads
 # Database
 *.db
 *.db.bak
+
+# secrets & caches
+.env
+st_tcx/cookies.txt
+st_tcx/ids.txt
+*.error.html
