@@ -23,3 +23,12 @@ class EditActivityForm(FlaskForm):
 
     submit = SubmitField("Save")
     cancel = SubmitField("Cancel")
+    general_trail = SubmitField("General Trail Run")
+    general_mountain_bike = SubmitField("General Mountain Bike")
+    general_gravel_bike = SubmitField("General Gravel Bike")
+    general_virtual_bike = SubmitField("General Virtual Bike")
+    strength = SubmitField("Strength Training")
+    l3_skate_roller = SubmitField("L3 Skate Roller")
+    l3_classic_roller = SubmitField("L3 Classic Roller")
+    general_skate_ski = SubmitField("General Skate Ski")
+    general_classic_ski = SubmitField("General Classic Ski")
