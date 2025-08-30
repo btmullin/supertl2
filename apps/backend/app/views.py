@@ -178,6 +178,92 @@ def edit_activity():
 
     if form.cancel.data:
         return redirect(next_url)
+    
+    if form.general_trail.data:
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+
+        # BTM - TODO: These IDs should be looked up dynamically
+        training_data.workoutTypeId = 1  # General
+        training_data.categoryId = 10  # Trail Running
+        training_data.isTraining = 1  # Mark as training
+
+        sqla_db.session.commit()
+
+        return redirect(next_url)
+
+    if form.general_mountain_bike.data or form.general_gravel_bike.data or form.general_virtual_bike.data:
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+
+        # BTM - TODO: These IDs should be looked up dynamically
+        training_data.workoutTypeId = 1  # General
+        if form.general_gravel_bike.data:
+            training_data.categoryId = 13  # Gravel Biking
+        elif form.general_mountain_bike.data:
+            training_data.categoryId = 14  # Mountain Biking
+        else:
+            training_data.categoryId = 18  # Virtual Biking
+        training_data.isTraining = 1  # Mark as training
+
+        sqla_db.session.commit()
+
+        return redirect(next_url)
+
+    if form.strength.data:
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+
+        # BTM - TODO: These IDs should be looked up dynamically
+        training_data.workoutTypeId = 6  # Strength
+        training_data.categoryId = 15  # Strength Training
+        training_data.isTraining = 1  # Mark as training
+
+        sqla_db.session.commit()
+
+        return redirect(next_url)
+
+    if form.l3_classic_roller.data or form.l3_skate_roller.data:
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+
+        # BTM - TODO: These IDs should be looked up dynamically
+        training_data.workoutTypeId = 2  # L3
+        if form.l3_classic_roller.data:
+            training_data.categoryId = 7  # L3 Classic Roller Ski
+        else:
+            training_data.categoryId = 6  # L3 Skate Roller Ski
+        training_data.isTraining = 1  # Mark as training
+
+        sqla_db.session.commit()
+
+        return redirect(next_url)
+
+    if form.general_skate_ski.data or form.general_classic_ski.data:
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+
+        # BTM - TODO: These IDs should be looked up dynamically
+        training_data.workoutTypeId = 1  # General
+        if form.general_classic_ski.data:
+            training_data.categoryId = 5  # Classic Snow Ski
+        else:
+            training_data.categoryId = 4  # Skate Snow Ski
+        training_data.isTraining = 1  # Mark as training
+
+        sqla_db.session.commit()
+
+        return redirect(next_url)
 
     if form.validate_on_submit():
         workout_id = form.workoutTypeId.data or None
