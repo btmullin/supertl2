@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse, hashlib, os, subprocess, sys
-from datetime import datetime
+from datetime import datetime, timezone
 import sqlite3
 from pathlib import Path
 
@@ -18,15 +18,15 @@ def backup_one(src_path: Path, dst_path: Path):
 
 def main():
     p = argparse.ArgumentParser(description="Snapshot SQLite DBs consistently.")
-    p.add_argument("--db-dir", default="app/db", help="Directory containing *.db files")
-    p.add_argument("--out-root", default="db_backups", help="Root folder for snapshots")
+    p.add_argument("--db-dir", default="../../db", help="Directory containing *.db files")
+    p.add_argument("--out-root", default="../../db/db_backups", help="Root folder for snapshots")
     args = p.parse_args()
 
     db_dir = Path(args.db_dir)
     out_root = Path(args.out_root)
 
     commit = git_hash()
-    ts = datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     # Collect DB files
     dbs = sorted(db_dir.glob("*.db"))
