@@ -18,6 +18,9 @@ uploads
 *.db
 *.db.bak
 
+# Backups
+MANIFEST.txt
+
 # secrets & caches
 .env
 util/sporttracks/st_tcx/cookies.txt
