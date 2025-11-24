@@ -17,12 +17,13 @@ from flask import (
 from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
 from app.db.db import import_strava_data
+from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
+from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .forms.ActivityQueryForm import ActivityQueryFilterForm
 from .models import StravaActivity, WorkoutType, TrainingLogData, Category
 from .db.base import sqla_db
-from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
 from .filters import category_path_filter
 
 PER_PAGE = 25
@@ -290,6 +291,9 @@ def edit_activity():
 @views.route("/admin/import-strava")
 def import_strava():
     import_strava_data()
+
+    from apps.backend.app.db.db import STL_DB
+    result = backfill_new_strava(db_path=STL_DB)
 
     flash(f"Imported new activities.")
     return redirect(url_for("views.activitylist"))
