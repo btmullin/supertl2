@@ -12,5 +12,5 @@ services:
       FLASK_ENV: development   # Enables debug mode and auto-reload
       FLASK_DEBUG: 1
       FLASK_APP: apps/backend/supertl2.py
-      PYTHONPATH: /app/apps/common
+      PYTHONPATH: /app/apps/common:/app:/app/apps/backend
     command: flask run --host=0.0.0.0
