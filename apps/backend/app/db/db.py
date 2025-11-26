@@ -108,3 +108,93 @@ def import_strava_data():
     """)
 
     supertl_db.commit()
+
+def get_canonical_activities(limit=100, offset=0):
+    """
+    Return canonical activities with optional TrainingLogData joined.
+    """
+    db = get_stl_db()
+
+    cur = db.execute(
+        """
+        SELECT
+            a.id,
+            a.start_time_utc,
+            a.sport as sportType,
+            a.name,
+            a.distance_m as distance,
+            a.moving_time_s as movingTimeInSeconds,
+
+            -- Training Log fields
+            t.canonical_activity_id,
+            t.isTraining,
+            t.categoryId,
+            t.notes,
+            t.tags
+
+        FROM activity a
+        LEFT JOIN TrainingLogData t
+          ON t.canonical_activity_id = a.id
+
+        ORDER BY a.start_time_utc DESC
+        LIMIT ? OFFSET ?
+        """,
+        (limit, offset),
+    )
+
+    return cur.fetchall()
+
+
+def get_canonical_activity_count():
+    """
+    Return total number of canonical activities.
+    """
+    db = get_stl_db()
+    cur = db.execute("SELECT COUNT(*) AS cnt FROM activity")
+    row = cur.fetchone()
+    return row["cnt"] if row else 0
+
+
+def get_canonical_activity(activity_id: int):
+    """
+    Return a single canonical activity row by id.
+    """
+    db = get_stl_db()
+    cur = db.execute(
+        """
+        SELECT
+            id,
+            start_time_utc,
+            end_time_utc,
+            elapsed_time_s,
+            moving_time_s,
+            distance_m,
+            sport,
+            name,
+            source_quality,
+            created_at_utc,
+            updated_at_utc
+        FROM activity
+        WHERE id = ?
+        """,
+        (activity_id,),
+    )
+    return cur.fetchone()
+
+def get_canonical_id_for_strava_activity(strava_activity_id: str | int):
+    """
+    Given a Strava activityId, return the canonical activity.id,
+    or None if no matching canonical record exists yet.
+    """
+    db = get_stl_db()
+    cur = db.execute(
+        """
+        SELECT activity_id
+        FROM activity_source
+        WHERE source = 'strava'
+          AND source_activity_id = ?
+        """,
+        (str(strava_activity_id),),
+    )
+    row = cur.fetchone()
+    return row["activity_id"] if row else None
