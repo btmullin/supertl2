@@ -24,6 +24,22 @@ from flask import g
 from .services.category_paths import build_category_cache, category_full_path_from_id
 from .models.category import Category
 from .db.base import sqla_db
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+LOCAL_TZ = ZoneInfo("America/Chicago")
+UTC_TZ = ZoneInfo("UTC")
+
+def utc_to_local(utc_text):
+    if not utc_text:
+        return None
+    if utc_text.endswith("Z"):
+        utc_text = utc_text[:-1]
+
+    dt = datetime.fromisoformat(utc_text)
+    dt = dt.replace(tzinfo=UTC_TZ)
+    return dt.astimezone(LOCAL_TZ)
+
 
 def _get_category_cache():
     cache = getattr(g, "_category_cache", None)
@@ -153,3 +169,5 @@ def register_filters(app):
     app.jinja_env.filters["describe_object"] = describe_object
     app.jinja_env.filters["displaySportOrCategory"] = displaySportOrCategory
     app.jinja_env.filters["category_path"] = category_path_filter
+    app.jinja_env.filters["localtime"] = utc_to_local
+
