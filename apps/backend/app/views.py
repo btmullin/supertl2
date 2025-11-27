@@ -16,7 +16,12 @@ from flask import (
 )
 from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
-from app.db.db import import_strava_data
+from app.db.db import (
+    import_strava_data,
+    get_canonical_activities,
+    get_canonical_activity_count,
+    get_canonical_id_for_strava_activity
+)
 from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
@@ -29,6 +34,23 @@ from .filters import category_path_filter
 PER_PAGE = 25
 
 views = Blueprint("views", __name__)
+
+def get_or_create_training_log(activity_id: str) -> TrainingLogData:
+    """
+    Fetch TrainingLogData for the given Strava activityId, or create it if missing.
+    Also ensure canonical_activity_id is populated if we can find a canonical activity.
+    """
+    training_data = sqla_db.session.get(TrainingLogData, activity_id)
+    if not training_data:
+        training_data = TrainingLogData(activityId=activity_id)
+        sqla_db.session.add(training_data)
+
+    if training_data.canonical_activity_id is None:
+        canonical_id = get_canonical_id_for_strava_activity(activity_id)
+        if canonical_id is not None:
+            training_data.canonical_activity_id = canonical_id
+
+    return training_data
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""
@@ -137,6 +159,7 @@ def edit_activity():
 
     activity = sqla_db.session.get(StravaActivity, activity_id)
     if not activity:
+        print(f"Activity ID {activity_id} not found.", file=sys.stderr)
         flash("Activity not found.")
         return redirect(next_url)
 
@@ -180,11 +203,9 @@ def edit_activity():
     if form.cancel.data:
         return redirect(next_url)
     
+    # General Trail Run Quick Add Button
     if form.general_trail.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
+        training_data = get_or_create_training_log(activity_id)
 
         # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 1  # General
@@ -195,11 +216,9 @@ def edit_activity():
 
         return redirect(next_url)
 
+    # General MTB/Gravel/Virtual Bike Quick Add Buttons
     if form.general_mountain_bike.data or form.general_gravel_bike.data or form.general_virtual_bike.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
+        training_data = get_or_create_training_log(activity_id)
 
         # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 1  # General
@@ -215,11 +234,9 @@ def edit_activity():
 
         return redirect(next_url)
 
+    # Strength Training Quick Add Button
     if form.strength.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
+        training_data = get_or_create_training_log(activity_id)
 
         # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 6  # Strength
@@ -230,11 +247,9 @@ def edit_activity():
 
         return redirect(next_url)
 
+    # L3 Roller Ski Quick Add Buttons
     if form.l3_classic_roller.data or form.l3_skate_roller.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
+        training_data = get_or_create_training_log(activity_id)
 
         # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 2  # L3
@@ -248,11 +263,9 @@ def edit_activity():
 
         return redirect(next_url)
 
+    # General Ski/Snow Ski Quick Add Buttons
     if form.general_skate_ski.data or form.general_classic_ski.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
+        training_data = get_or_create_training_log(activity_id)
 
         # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 1  # General
@@ -266,14 +279,12 @@ def edit_activity():
 
         return redirect(next_url)
 
+    # Standard form submission
     if form.validate_on_submit():
         workout_id = form.workoutTypeId.data or None
         category_id = form.categoryId.data or None
 
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
+        training_data = get_or_create_training_log(activity_id)
 
         training_data.workoutTypeId = workout_id
         training_data.categoryId = category_id
@@ -303,19 +314,11 @@ def activitylist():
     page = request.args.get('page', 1, type=int)
     offset = (page - 1) * PER_PAGE
     # Fetch activities in date range
-    activities = (
-        sqla_db.session.query(StravaActivity)
-        .order_by(StravaActivity.startDateTime.desc())
-        .limit(PER_PAGE)
-        .offset(offset)
-        .all()
-    )
+    rows = get_canonical_activities(limit=PER_PAGE, offset=offset)
+    total = get_canonical_activity_count()
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE if total > 0 else 1
 
-    # Get total number of rows
-    total = sqla_db.session.query(func.count(StravaActivity.activityId)).scalar()
-    total_pages = (total + PER_PAGE - 1) // PER_PAGE
-    
-    return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)
+    return render_template("activitylist.html", activities=rows, page=page, total_pages=total_pages)
 
 @views.route("/query", methods=["GET"])
 def activity_query():
