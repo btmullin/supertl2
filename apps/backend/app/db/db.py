@@ -198,3 +198,21 @@ def get_canonical_id_for_strava_activity(strava_activity_id: str | int):
     )
     row = cur.fetchone()
     return row["activity_id"] if row else None
+
+def get_strava_activity_id_for_canonical_activity(canonical_id: int) -> str | None:
+    """
+    Given a canonical activity.id, return the Strava activityId if this
+    activity has a Strava source row; otherwise return None.
+    """
+    db = get_stl_db()
+    cur = db.execute(
+        """
+        SELECT source_activity_id
+        FROM activity_source
+        WHERE activity_id = ?
+          AND source = 'strava'
+        """,
+        (canonical_id,),
+    )
+    row = cur.fetchone()
+    return row["source_activity_id"] if row else None

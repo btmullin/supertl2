@@ -20,14 +20,15 @@ from app.db.db import (
     import_strava_data,
     get_canonical_activities,
     get_canonical_activity_count,
-    get_canonical_id_for_strava_activity
+    get_canonical_id_for_strava_activity,
+    get_strava_activity_id_for_canonical_activity
 )
 from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .forms.ActivityQueryForm import ActivityQueryFilterForm
-from .models import StravaActivity, WorkoutType, TrainingLogData, Category
+from .models import StravaActivity, WorkoutType, TrainingLogData, Category, Activity
 from .db.base import sqla_db
 from .filters import category_path_filter
 
@@ -152,10 +153,34 @@ def test():
 @views.route("/activity/edit", methods=["GET", "POST"])
 def edit_activity():
     next_url = request.args.get("next") or url_for("views.dashboard")
-    activity_id = request.args.get("id")
-    if not activity_id:
+
+    # ---- Interpret id as canonical activity.id ----
+    canonical_id_param = request.args.get("id")
+    if not canonical_id_param:
         flash("Missing activity ID.")
         return redirect(url_for("views.dashboard"))
+
+    try:
+        canonical_id = int(canonical_id_param)
+    except ValueError:
+        flash("Invalid activity ID.")
+        return redirect(url_for("views.dashboard"))
+
+    # Ensure the canonical activity exists
+    canonical_activity = sqla_db.session.get(Activity, canonical_id)
+    if not canonical_activity:
+        flash("Activity not found.")
+        return redirect(next_url)
+
+    # Map canonical -> Strava activityId (source_activity_id)
+    strava_id = get_strava_activity_id_for_canonical_activity(canonical_id)
+    if strava_id is None:
+        # For now: require a Strava source to edit; you can relax this later.
+        flash("No Strava source found for this activity.")
+        return redirect(next_url)
+
+    # ---- From here on, use strava_id exactly like the old activity_id ----
+    activity_id = strava_id
 
     activity = sqla_db.session.get(StravaActivity, activity_id)
     if not activity:
@@ -189,8 +214,10 @@ def edit_activity():
     """)).fetchall()
     form.categoryId.choices = [(0, "—")] + [(row.id, row.full_path) for row in category_paths]
 
+    # ---------- GET: prefill form ----------
     if request.method == "GET":
-        form.activityId.data = activity_id
+        form.activityId.data = activity_id  # still store the Strava id in the hidden field
+
         existing = sqla_db.session.get(TrainingLogData, activity_id)
         if existing:
             form.workoutTypeId.data = existing.workoutTypeId or 0
@@ -198,27 +225,40 @@ def edit_activity():
             form.notes.data = existing.notes
             form.tags.data = existing.tags
             form.isTraining.data = existing.isTraining if existing.isTraining is not None else 2
-        return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+        return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline, canonical_activity=canonical_activity)
 
+    # ---------- POST: buttons & save ----------
+
+    # Cancel: do nothing
     if form.cancel.data:
         return redirect(next_url)
-    
-    # General Trail Run Quick Add Button
-    if form.general_trail.data:
-        training_data = get_or_create_training_log(activity_id)
 
-        # BTM - TODO: These IDs should be looked up dynamically
+    # Convenience helper for quick actions
+    def _get_or_create_training_log():
+        training_data = sqla_db.session.get(TrainingLogData, activity_id)
+        if not training_data:
+            training_data = TrainingLogData(activityId=activity_id)
+            sqla_db.session.add(training_data)
+        if training_data.canonical_activity_id is None:
+            canonical_id = get_canonical_id_for_strava_activity(activity_id)
+            if canonical_id is not None:
+                training_data.canonical_activity_id = canonical_id
+        return training_data
+
+    # Quick button: General Trail Run
+    if form.general_trail.data:
+        training_data = _get_or_create_training_log()
+        # BTM - TODO: look up IDs dynamically instead of hardcoding
         training_data.workoutTypeId = 1  # General
         training_data.categoryId = 10  # Trail Running
         training_data.isTraining = 1  # Mark as training
 
         sqla_db.session.commit()
-
         return redirect(next_url)
 
-    # General MTB/Gravel/Virtual Bike Quick Add Buttons
+    # Quick button: General MTB / Gravel / Virtual bike
     if form.general_mountain_bike.data or form.general_gravel_bike.data or form.general_virtual_bike.data:
-        training_data = get_or_create_training_log(activity_id)
+        training_data = _get_or_create_training_log()
 
         # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 1  # General
@@ -231,12 +271,11 @@ def edit_activity():
         training_data.isTraining = 1  # Mark as training
 
         sqla_db.session.commit()
-
         return redirect(next_url)
 
-    # Strength Training Quick Add Button
+    # Quick button: Strength
     if form.strength.data:
-        training_data = get_or_create_training_log(activity_id)
+        training_data = _get_or_create_training_log()
 
         # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 6  # Strength
@@ -244,14 +283,12 @@ def edit_activity():
         training_data.isTraining = 1  # Mark as training
 
         sqla_db.session.commit()
-
         return redirect(next_url)
 
-    # L3 Roller Ski Quick Add Buttons
+    # Quick button: L3 roller (classic or skate)
     if form.l3_classic_roller.data or form.l3_skate_roller.data:
-        training_data = get_or_create_training_log(activity_id)
+        training_data = _get_or_create_training_log()
 
-        # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 2  # L3
         if form.l3_classic_roller.data:
             training_data.categoryId = 7  # L3 Classic Roller Ski
@@ -260,14 +297,12 @@ def edit_activity():
         training_data.isTraining = 1  # Mark as training
 
         sqla_db.session.commit()
-
         return redirect(next_url)
 
-    # General Ski/Snow Ski Quick Add Buttons
+    # Quick button: General Skate/Classic snow ski
     if form.general_skate_ski.data or form.general_classic_ski.data:
-        training_data = get_or_create_training_log(activity_id)
+        training_data = _get_or_create_training_log()
 
-        # BTM - TODO: These IDs should be looked up dynamically
         training_data.workoutTypeId = 1  # General
         if form.general_classic_ski.data:
             training_data.categoryId = 5  # Classic Snow Ski
@@ -276,16 +311,14 @@ def edit_activity():
         training_data.isTraining = 1  # Mark as training
 
         sqla_db.session.commit()
-
         return redirect(next_url)
 
-    # Standard form submission
+    # Normal submit: use full form values
     if form.validate_on_submit():
         workout_id = form.workoutTypeId.data or None
         category_id = form.categoryId.data or None
 
-        training_data = get_or_create_training_log(activity_id)
-
+        training_data = _get_or_create_training_log()
         training_data.workoutTypeId = workout_id
         training_data.categoryId = category_id
         training_data.notes = form.notes.data
@@ -293,11 +326,11 @@ def edit_activity():
         training_data.isTraining = form.isTraining.data
 
         sqla_db.session.commit()
-
         flash("Metadata updated.")
         return redirect(next_url)
 
-    return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+    # If we get here, POST didn't match any button/validation; redisplay form
+    return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline, canonical_activity=canonical_activity)
 
 @views.route("/admin/import-strava")
 def import_strava():
