@@ -69,6 +69,7 @@ def get_dashboard_context(week_offset=0):
     # Fetch activities in date range
     activities = (
         sqla_db.session.query(StravaActivity)
+        .options(joinedload(StravaActivity.training_log))
         .join(StravaActivity.training_log)  # Only join activities that have a training_log
         .filter(
             TrainingLogData.isTraining == 1,
@@ -97,6 +98,7 @@ def get_dashboard_context(week_offset=0):
     previous_week_end = end_of_week - timedelta(weeks=1)
     previous_activities = (
         sqla_db.session.query(StravaActivity)
+        .options(joinedload(StravaActivity.training_log))
         .join(StravaActivity.training_log)  # Only join activities that have a training_log
         .filter(
             TrainingLogData.isTraining == 1,
