@@ -30,9 +30,8 @@ class Activity(BaseModel):
         back_populates="canonical_activity",
     )
 
-    # Optional: later you can add an ActivitySource model and uncomment this:
-    #
-    # sources = relationship(
-    #     "ActivitySource",
-    #     back_populates="activity",
-    # )
+    sources = relationship(
+        "ActivitySource",
+        back_populates="activity",
+        cascade="all, delete-orphan",
+    )

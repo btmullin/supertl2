@@ -2,6 +2,8 @@
 import sqlite3
 from flask import g
 import os
+from .base import sqla_db
+from ..models.activitysource import ActivitySource
 
 STL_DB = '/app/db/supertl2.db'
 STRAVA_DB = '/stravadb/strava.db'
@@ -181,38 +183,29 @@ def get_canonical_activity(activity_id: int):
     )
     return cur.fetchone()
 
-def get_canonical_id_for_strava_activity(strava_activity_id: str | int):
+def get_canonical_id_for_strava_activity(strava_activity_id: str | int) -> int | None:
     """
-    Given a Strava activityId, return the canonical activity.id,
-    or None if no matching canonical record exists yet.
+    Given a Strava activityId, return the canonical activity.id, or None.
     """
-    db = get_stl_db()
-    cur = db.execute(
-        """
-        SELECT activity_id
-        FROM activity_source
-        WHERE source = 'strava'
-          AND source_activity_id = ?
-        """,
-        (str(strava_activity_id),),
+    return (
+        sqla_db.session.query(ActivitySource.activity_id)
+        .filter(
+            ActivitySource.source == "strava",
+            ActivitySource.source_activity_id == str(strava_activity_id),
+        )
+        .scalar()
     )
-    row = cur.fetchone()
-    return row["activity_id"] if row else None
 
 def get_strava_activity_id_for_canonical_activity(canonical_id: int) -> str | None:
     """
-    Given a canonical activity.id, return the Strava activityId if this
-    activity has a Strava source row; otherwise return None.
+    Given a canonical activity.id, return the Strava activityId, or None.
     """
-    db = get_stl_db()
-    cur = db.execute(
-        """
-        SELECT source_activity_id
-        FROM activity_source
-        WHERE activity_id = ?
-          AND source = 'strava'
-        """,
-        (canonical_id,),
+    return (
+        sqla_db.session.query(ActivitySource.source_activity_id)
+        .filter(
+            ActivitySource.activity_id == canonical_id,
+            ActivitySource.source == "strava",
+        )
+        .scalar()
     )
-    row = cur.fetchone()
-    return row["source_activity_id"] if row else None
+
