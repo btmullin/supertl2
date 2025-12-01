@@ -23,7 +23,14 @@ from app.db.db import (
     get_canonical_id_for_strava_activity,
     get_strava_activity_id_for_canonical_activity
 )
-from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
+from app.services.analytics import (
+    summarize_activities,
+    bucket_daily,
+    summarize_by,
+    group_by_category_id,
+    get_start_datetime,
+    get_local_date_for_activity
+) 
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
@@ -68,14 +75,13 @@ def get_dashboard_context(week_offset=0):
 
     # Fetch activities in date range
     activities = (
-        sqla_db.session.query(StravaActivity)
-        .options(joinedload(StravaActivity.training_log))
-        .join(StravaActivity.training_log)  # Only join activities that have a training_log
+        sqla_db.session.query(Activity)
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            func.date(StravaActivity.startDateTime).between(start_of_week, end_of_week)
+            func.date(Activity.start_time_utc).between(start_of_week, end_of_week),
         )
-        .order_by(StravaActivity.startDateTime)
+        .order_by(Activity.start_time_utc)
         .all()
     )
 
@@ -83,28 +89,29 @@ def get_dashboard_context(week_offset=0):
     activities_by_day = defaultdict(list)
     activities_data = []
     for a in activities:
-        day = a.startDateTime.date()
+        day = get_local_date_for_activity(a)
         activities_by_day[day].append(a)
         activities_data.append(a)
 
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
-    daily_summaries = bucket_daily(activities)
-
+    daily_summaries = {
+        day: summarize_activities(activities_by_day[day])
+        for day in days
+    }
     week_summary = summarize_activities(activities)
 
     # Get previous week summaries
     previous_week_start = start_of_week - timedelta(weeks=1)
     previous_week_end = end_of_week - timedelta(weeks=1)
     previous_activities = (
-        sqla_db.session.query(StravaActivity)
-        .options(joinedload(StravaActivity.training_log))
-        .join(StravaActivity.training_log)  # Only join activities that have a training_log
+        sqla_db.session.query(Activity)
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            func.date(StravaActivity.startDateTime).between(previous_week_start, previous_week_end)
+            func.date(Activity.start_time_utc).between(previous_week_start, previous_week_end),
         )
-        .order_by(StravaActivity.startDateTime)
+        .order_by(Activity.start_time_utc)
         .all()
     )
 

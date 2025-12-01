@@ -2,12 +2,82 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
 from math import fsum
-from typing import Iterable, Optional, Any, Callable, Dict, List
+from typing import Iterable, Optional, Any, Callable, Dict, List, Tuple, Any as _Any
 from collections import defaultdict, Counter
-from datetime import timedelta
 from collections import OrderedDict
 from datetime import datetime, date, timedelta
-from typing import Tuple, Iterable, Optional, Dict, Any
+from zoneinfo import ZoneInfo
+
+LOCAL_TZ = ZoneInfo("America/Chicago")
+UTC_TZ = ZoneInfo("UTC")
+
+def _get_distance_m(a: _Any) -> Optional[float]:
+    """
+    Distance in meters, from either:
+      - canonical Activity.distance_m
+      - StravaActivity.distance
+    """
+    if hasattr(a, "distance_m"):
+        return getattr(a, "distance_m", None)
+    return getattr(a, "distance", None)
+
+def _get_moving_s(a: _Any) -> Optional[float]:
+    """
+    Moving time in seconds, from either:
+      - canonical Activity.moving_time_s
+      - StravaActivity.movingTimeInSeconds
+    """
+    if hasattr(a, "moving_time_s"):
+        return getattr(a, "moving_time_s", None)
+    return getattr(a, "movingTimeInSeconds", None)
+
+def _get_sport(a: _Any) -> str:
+    """
+    Sport name, from:
+      - canonical Activity.sport
+      - StravaActivity.sportType
+    """
+    if hasattr(a, "sport"):
+        return getattr(a, "sport") or "Unknown"
+    return getattr(a, "sportType", None) or "Unknown"
+
+def get_local_date_for_activity(a):
+    """
+    Convert an Activity's start time to local (America/Chicago) date.
+    Works for canonical Activity (start_time_utc) or StravaActivity (startDateTime).
+    """
+    dt = get_start_datetime(a)
+    if dt is None:
+        return None
+
+    # treat dt as UTC and convert to local
+    dt_utc = dt.replace(tzinfo=UTC_TZ)
+    return dt_utc.astimezone(LOCAL_TZ).date()
+
+def get_start_datetime(a: _Any) -> Optional[datetime]:
+    """
+    Start time as a datetime (naive, typically UTC).
+
+    For StravaActivity: use startDateTime (already a datetime).
+    For canonical Activity: parse start_time_utc ISO8601 string
+      like '2025-08-29T19:24:52Z'.
+    """
+    dt = getattr(a, "startDateTime", None)
+    if isinstance(dt, datetime):
+        return dt
+
+    # canonical case: start_time_utc is a TEXT ISO string
+    text = getattr(a, "start_time_utc", None)
+    if text:
+        s = text
+        if s.endswith("Z"):
+            s = s[:-1]
+        try:
+            return datetime.fromisoformat(s)
+        except ValueError:
+            return None
+
+    return None
 
 @dataclass
 class ActivitySummary:
@@ -48,14 +118,18 @@ def summarize_activities(activities: Iterable[Any]) -> ActivitySummary:
     acts = list(activities)
     n = len(acts)
 
-    distances = _safe(getattr(a, "distance", None) for a in acts)                       # meters
-    movings   = _safe(getattr(a, "movingTimeInSeconds", None) for a in acts)            # seconds
-    elevs     = _safe(getattr(a, "elevation", None) for a in acts)                      # meters (as per your model)
+    # Distances / time: support canonical and Strava
+    distances = _safe(_get_distance_m(a) for a in acts)        # meters
+    movings   = _safe(_get_moving_s(a) for a in acts)          # seconds
+
+    # These still come from StravaActivity only (canonical doesn't have them yet)
+    elevs     = _safe(getattr(a, "elevation", None) for a in acts)   # meters
     calories  = _safe(getattr(a, "calories", None) for a in acts)
     avg_hr    = [getattr(a, "averageHeartRate", None) for a in acts]
     max_hr    = _safe(getattr(a, "maxHeartRate", None) for a in acts)
     avg_power = _safe(getattr(a, "averagePower", None) for a in acts)
-    sports    = [getattr(a, "sportType", None) or "Unknown" for a in acts]
+
+    sports    = [_get_sport(a) for a in acts]
 
     total_distance = sum(distances)
     total_moving   = sum(movings)
@@ -70,7 +144,7 @@ def summarize_activities(activities: Iterable[Any]) -> ActivitySummary:
     if hr_vals:
         mean_hr = fsum(hr_vals) / len(hr_vals)
 
-    tw_hr = _time_weighted_avg(avg_hr, (getattr(a, "movingTimeInSeconds", None) for a in acts))
+    tw_hr = _time_weighted_avg(avg_hr, (_get_moving_s(a) for a in acts))
 
     mean_pwr = None
     if avg_power:
@@ -175,7 +249,7 @@ def _period_bounds_for_activities(
 ) -> Optional[Tuple[date, date]]:
     dates = []
     for a in activities:
-        dt = getattr(a, "startDateTime", None)
+        dt = get_start_datetime(a)
         if isinstance(dt, datetime):
             dates.append(dt.date())
     if not dates:
@@ -192,8 +266,8 @@ def _period_bounds_for_activities(
 def _empty_summary() -> ActivitySummary:
     return ActivitySummary(
         count=0,
-        total_distance_m=0.0,
-        total_moving_s=0.0,
+        total_distance=0,
+        total_moving_s=0,
         total_elevation_m=0.0,
         total_calories=0.0,
         avg_distance_m=0.0,
@@ -221,7 +295,7 @@ def bucket_daily(
     """Group activities by calendar day (local date of startDateTime)."""
     groups: Dict[date, list] = defaultdict(list)
     for a in activities:
-        dt = getattr(a, "startDateTime", None)
+        dt = get_start_datetime(a)
         if isinstance(dt, datetime):
             groups[dt.date()].append(a)
 
@@ -255,7 +329,7 @@ def bucket_weekly(
     """Group activities by week; key is the date of the week's start."""
     groups: Dict[date, list] = defaultdict(list)
     for a in activities:
-        dt = getattr(a, "startDateTime", None)
+        dt = get_start_datetime(a)
         if isinstance(dt, datetime):
             d = dt.date()
             k = _week_start(d, week_start)
@@ -288,7 +362,7 @@ def bucket_monthly(
     """Group activities by calendar month; key is the first day of that month."""
     groups: Dict[date, list] = defaultdict(list)
     for a in activities:
-        dt = getattr(a, "startDateTime", None)
+        dt = get_start_datetime(a)
         if isinstance(dt, datetime):
             d = dt.date()
             k = _month_start(d)
