@@ -11,17 +11,46 @@
           <th>Time</th>
           <th>Training Log</th>
           <th>Is Training?</th>
+          <th>Source</th>
         </tr>
       </thead>
-      {% for activity in activities %}
+      {% for activity, training_log in activities %}
         <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
-          <td class="col-date-time">{{ activity['start_time_utc'] | localtime | pretty_datetime }}</td>
-          <td class="col-sport">{{ activity.sportType }}</td>
+          <td class="col-date-time">{{ activity.start_time_utc | localtime | pretty_datetime }}</td>
+          <td class="col-sport">{{ activity.sport }}</td>
           <td class="col-name">{{ activity.name }}</td>
-          <td class="col-distance">{{ activity.distance | km }}</td>
-          <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-          <td class="col-extra">{% if activity['canonical_activity_id'] %}✅{% else %}❌{% endif %}</td>
-          <td class="col-training">{% if activity['isTraining'] == 1 %}✅{% elif activity['isTraining'] == 0 %}❌{% else %}❔{% endif %}</td>
+          <td class="col-distance">{{ activity.distance_m | km }}</td>
+          <td class="col-time">{{ activity.moving_time_s | format_duration }}</td>
+          <td class="col-extra">{% if training_log and training_log.canonical_activity_id %}✅{% else %}❌{% endif %}</td>
+          <td class="col-training">
+            {% if training_log is not none %}
+              {% if training_log.isTraining == 1 %}
+                ✅
+              {% elif training_log.isTraining == 0 %}
+                ❌
+              {% else %}
+                ❔
+              {% endif %}
+            {% else %}
+              ❔
+            {% endif %}
+          </td>
+          <td class="col-source">
+            {% if activity.sources %}
+              {% for src in activity.sources %}
+                {% if src.source == 'strava' %}
+                  STRAVA
+                {% elif src.source == 'sporttracks' %}
+                  ST
+                {% else %}
+                  {{ src.source|upper }}
+                {% endif %}
+                {% if not loop.last %}, {% endif %}
+              {% endfor %}
+            {% else %}
+              ❔
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </table>
