@@ -182,12 +182,16 @@ def edit_activity():
         return redirect(next_url)
 
     # Map canonical -> Strava activityId (source_activity_id)
-    strava_id = get_strava_activity_id_for_canonical_activity(canonical_id)
-    if strava_id is None:
-        # For now: require a Strava source to edit; you can relax this later.
+    strava_src = next(
+        (s for s in canonical_activity.sources if s.source == "strava"),
+        None,
+    )
+    if strava_src is None:
+        # For now we still bail; later we might fall back to SportTracks
         flash("No Strava source found for this activity.")
         return redirect(next_url)
-
+    strava_id = strava_src.source_activity_id
+    
     # ---- From here on, use strava_id exactly like the old activity_id ----
     activity_id = strava_id
 
