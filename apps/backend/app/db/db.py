@@ -2,8 +2,10 @@
 import sqlite3
 from flask import g
 import os
+from sqlalchemy.orm import joinedload
 from .base import sqla_db
 from ..models.activitysource import ActivitySource
+from ..models import Activity, TrainingLogData
 
 STL_DB = '/app/db/supertl2.db'
 STRAVA_DB = '/stravadb/strava.db'
@@ -113,38 +115,24 @@ def import_strava_data():
 
 def get_canonical_activities(limit=100, offset=0):
     """
-    Return canonical activities with optional TrainingLogData joined.
+    Return canonical Activity ORM objects with optional TrainingLogData joined.
+    Each row is a tuple: (Activity, TrainingLogData or None)
     """
-    db = get_stl_db()
-
-    cur = db.execute(
-        """
-        SELECT
-            a.id,
-            a.start_time_utc,
-            a.sport as sportType,
-            a.name,
-            a.distance_m as distance,
-            a.moving_time_s as movingTimeInSeconds,
-
-            -- Training Log fields
-            t.canonical_activity_id,
-            t.isTraining,
-            t.categoryId,
-            t.notes,
-            t.tags
-
-        FROM activity a
-        LEFT JOIN TrainingLogData t
-          ON t.canonical_activity_id = a.id
-
-        ORDER BY a.start_time_utc DESC
-        LIMIT ? OFFSET ?
-        """,
-        (limit, offset),
+    q = (
+        sqla_db.session.query(Activity, TrainingLogData)
+        .outerjoin(
+            TrainingLogData,
+            TrainingLogData.canonical_activity_id == Activity.id,
+        )
+        .options(
+            joinedload(Activity.sources)  # pre-load Activity.sources to avoid N+1
+        )
+        .order_by(Activity.start_time_utc.desc())
+        .limit(limit)
+        .offset(offset)
     )
 
-    return cur.fetchall()
+    return q.all()
 
 
 def get_canonical_activity_count():
