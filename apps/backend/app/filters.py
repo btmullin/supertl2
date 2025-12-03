@@ -58,6 +58,10 @@ def format_duration(seconds):
         str: A string representing the formatted duration. If the duration is less than an hour,
              the format will be MM:SS. Otherwise, the format will be HH:MM:SS.
     """
+    try:
+        seconds = int(float(seconds))
+    except (TypeError, ValueError):
+        raise TypeError("Parameter seconds must be int-convertible")
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
