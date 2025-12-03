@@ -14,59 +14,153 @@
     <div style="display: flex; flex-direction: row; gap: 2em; flex-wrap: wrap;">
 
       <!-- Left: Strava Info -->
+      <!-- Left: Canonical + Source Info -->
       <div style="flex: 1; min-width: 300px;">
-        <h3>Strava Activity Info</h3>
-        <a href="https://www.strava.com/activities/{{ activity.activityId }}" target="_blank" rel="noopener">
+
+        <h3>Canonical Activity Info</h3>
+        <p>
+          <strong>Sources:</strong>
+          {% set has_any_source = false %}
+
+          {# Strava source (single) #}
+          {% if strava_activity %}
+            {% set has_any_source = true %}
+            <a href="https://www.strava.com/activities/{{ strava_activity.activityId }}"
+               target="_blank" rel="noopener">
+              Strava
+            </a>
+            {% if sporttracks_sources and sporttracks_sources|length > 0 %}, {% endif %}
+          {% endif %}
+
+          {# SportTracks sources (one or many) #}
+          {% if sporttracks_sources and sporttracks_sources|length > 0 %}
+            {% set has_any_source = true %}
+            {% for st in sporttracks_sources %}
+              <a href="https://sporttracks.mobi/activity/{{ st.source_activity_id }}"
+                 target="_blank" rel="noopener">
+                SportTracks
+              </a>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+          {% endif %}
+
+          {# Fallback if no sources at all #}
+          {% if not has_any_source %}
+            —
+          {% endif %}
+        </p>
+        <table class="styled-table">
+          <tbody>
+            <tr>
+              <th>Start Time</th>
+              <td>{{ canonical_activity.start_time_utc | localtime | pretty_datetime }}</td>
+            </tr>
+            <tr>
+              <th>Sport</th>
+              <td>{{ canonical_activity.sport }}</td>
+            </tr>
+            <tr>
+              <th>Name</th>
+              <td>{{ canonical_activity.name }}</td>
+            </tr>
+            <tr>
+              <th>Distance</th>
+              <td>{{ canonical_activity.distance_m | km }}</td>
+            </tr>
+            <tr>
+              <th>Duration</th>
+              <td>{{ canonical_activity.moving_time_s | format_duration }}</td>
+            </tr>
+            {# Optional: only if your Activity has a description column #}
+            {% if canonical_activity.description is defined %}
+              <tr>
+                <th>Description</th>
+                <td>{{ canonical_activity.description or "—" }}</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+
+        {# --- Strava details (if present) --- #}
+        {% if strava_activity %}
+          <p></p>
+          <h3>Strava Activity Info</h3>
+          <a href="https://www.strava.com/activities/{{ strava_activity.activityId }}"
+             target="_blank" rel="noopener">
             View on Strava
           </a>
           <p></p>
-        <table class="styled-table">
-          <tbody>
-            <tr><th>Start Time</th><td>{{ activity.startDateTime | pretty_datetime }}</td></tr>
-            <tr><th>Sport</th><td>{{ activity.sportType }}</td></tr>
-            <tr><th>Name</th><td>{{ activity.name }}</td></tr>
-            <tr><th>Distance</th><td>{{ activity.distance | km }}</td></tr>
-            <tr><th>Duration</th><td>{{ activity.movingTimeInSeconds | format_duration }}</td></tr>
-            <tr><th>Calories</th><td>{{ activity.calories or "—" }}</td></tr>
-            <tr><th>Avg HR</th><td>{{ activity.averageHeartRate or "—" }}</td></tr>
-            <tr><th>Max HR</th><td>{{ activity.maxHeartRate or "—" }}</td></tr>
-            <tr><th>Avg Power</th><td>{{ activity.averagePower or "—" }}</td></tr>
-            <tr><th>Description</th><td>{{ activity.description or "—" }}</td></tr>
-          </tbody>
-        </table>
-        <p></p>
-
+          <table class="styled-table">
+            <tbody>
+              <tr><th>Start Time</th><td>{{ strava_activity.startDateTime | pretty_datetime }}</td></tr>
+              <tr><th>Sport</th><td>{{ strava_activity.sportType }}</td></tr>
+              <tr><th>Name</th><td>{{ strava_activity.name }}</td></tr>
+              <tr><th>Distance</th><td>{{ strava_activity.distance | km }}</td></tr>
+              <tr><th>Duration</th><td>{{ strava_activity.movingTimeInSeconds | format_duration }}</td></tr>
+              <tr><th>Calories</th><td>{{ strava_activity.calories or "—" }}</td></tr>
+              <tr><th>Avg HR</th><td>{{ strava_activity.averageHeartRate or "—" }}</td></tr>
+              <tr><th>Max HR</th><td>{{ strava_activity.maxHeartRate or "—" }}</td></tr>
+              <tr><th>Avg Power</th><td>{{ strava_activity.averagePower or "—" }}</td></tr>
+              <tr><th>Description</th><td>{{ strava_activity.description or "—" }}</td></tr>
+            </tbody>
+          </table>
+        {% endif %}
         {% if summary_polyline %}
-        <h4>Route</h4>
+        <p></p>
+        <h4>Route (Strava)</h4>
         <div id="map" style="height: 500px; margin-bottom: 1em; border-radius: 10px;"></div>
 
         <script>
           document.addEventListener("DOMContentLoaded", function () {
             const encoded = {{ summary_polyline | tojson }};
 
-        
             if (!encoded) {
               console.warn("No polyline available.");
               return;
             }
-        
+
             // Decode the polyline — returns a Leaflet Polyline
             const polyline = L.Polyline.fromEncoded(encoded);
-        
+
             const map = L.map("map");
-        
+
             L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
               maxZoom: 18,
             }).addTo(map);
-        
+
             polyline.addTo(map);
             map.fitBounds(polyline.getBounds());
           });
         </script>
-        
+        {% endif %}
+
+        {# --- SportTracks source metadata (if present) --- #}
+        {% if sporttracks_activity %}
+          <p></p>
+          <h3>SportTracks Activity Info</h3>
+          <a href="https://sporttracks.mobi/activity/{{ sporttracks_activity.activity_id }}"
+             target="_blank" rel="noopener">
+            View on SportTracks
+          </a>
+          <p></p>
+          <table class="styled-table">
+            <tbody>
+              <tr><th>Start Date</th><td>{{ sporttracks_activity.start_date }}</td></tr>
+              <tr><th>Start Time</th><td>{{ sporttracks_activity.start_time }}</td></tr>
+              <tr><th>Sport</th><td>{{ sporttracks_activity.category }}</td></tr>
+              <tr><th>Name</th><td>{{ sporttracks_activity.name }}</td></tr>
+              <tr><th>Distance</th><td>{{ sporttracks_activity.distance_m | km }}</td></tr>
+              <tr><th>Duration</th><td>{{ sporttracks_activity.duration_s | format_duration }}</td></tr>
+              <tr><th>Calories</th><td>{{ sporttracks_activity.calories_kcal or "—" }}</td></tr>
+              <tr><th>Avg HR</th><td>{{ sporttracks_activity.avg_heartrate_bpm or "—" }}</td></tr>
+              <tr><th>Max HR</th><td>{{ sporttracks_activity.maxHeartRate or "—" }}</td></tr>
+              <tr><th>Avg Power</th><td>{{ sporttracks_activity.avg_power_w or "—" }}</td></tr>
+              <tr><th>Description</th><td>{{ sporttracks_activity.notes or "—" }}</td></tr>
+            </tbody>
+          </table>
         {% endif %}
 
       </div>
+
 
       <!-- Right: Editable Training Log Fields -->
       <div style="flex: 1; min-width: 300px;">
@@ -119,6 +213,7 @@
       </div>
     </div>
   </div>
+  {% if strava_activity %}
   <div class="section">
     <canvas id="streamChart"></canvas>
 
@@ -130,14 +225,14 @@
           afterDraw(chart, args, options) {
             const tooltip = chart.tooltip;
             const activeElements = tooltip._active || tooltip.dataPoints;
-        
+
             if (!activeElements || activeElements.length === 0) return;
-        
+
             const ctx = chart.ctx;
             const x = activeElements[0].element.x;
             const topY = chart.chartArea.top;
             const bottomY = chart.chartArea.bottom;
-        
+
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(x, topY);
@@ -167,7 +262,7 @@
             datasets: [
               {
                 label: 'Altitude',
-                data: {{ activity.getAltitudePlotData() | tojson }},
+                data: {{ strava_activity.getAltitudePlotData() | tojson }},
                 borderWidth: 2,
                 fill: true,
                 yAxisID: 'y_alt',
@@ -176,94 +271,96 @@
                 tension: 0.3
               },
               {
-                  label: 'Heart Rate',
-                  data: {{ activity.getHRPlotData() | tojson }},
-                  borderWidth: 2,
-                  fill: true,
-                  yAxisID: 'y_hr',
-                  borderColor: 'rgb(200, 50, 50)',
-                  backgroundColor: 'rgba(200, 50, 50, 0.2)',
-                  pointRadius: 0,
-                  tension: 0.3
-                }
-              ]
-            },
-            options: {
-              maintainAspectRatio: false,
-              plugins: {
-                hoverLine: {
-                  color: 'rgba(0, 0, 0, 0.5)', // optional: line color
-                  lineWidth: 1,
-                  dash: [4, 4] // optional: dashed line
-                },
-                legend: {
-                  display: true,
-                  position: 'right',
-                  labels: {
-                    color: 'rgb(50, 99, 132)'
-                  }
-                },
-                tooltip: {
-                  enabled: true,
-                  mode: 'index',
-                  intersect: false,
+                label: 'Heart Rate',
+                data: {{ strava_activity.getHRPlotData() | tojson }},
+                borderWidth: 2,
+                fill: true,
+                yAxisID: 'y_hr',
+                borderColor: 'rgb(200, 50, 50)',
+                backgroundColor: 'rgba(200, 50, 50, 0.2)',
+                pointRadius: 0,
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            maintainAspectRatio: false,
+            plugins: {
+              hoverLine: {
+                color: 'rgba(0, 0, 0, 0.5)',
+                lineWidth: 1,
+                dash: [4, 4]
+              },
+              legend: {
+                display: true,
+                position: 'right',
+                labels: {
+                  color: 'rgb(50, 99, 132)'
                 }
               },
-              pointHoverRadius: 5,
-              responsive: true,
-              scales: {
-                x: {
-                  type: 'linear',
-                  display: true,
-                  title: {
-                    display: true,
-                    text: 'Time (h:mm:ss)'
-                  },
-                  ticks: {
-                    maxTicksLimit: 15,  // Reduce number of ticks
-                    callback: (value, index, ticks) => formatTime(value)
-                  }
-                },
-                y_alt: {
-                  display: true,
-                  position: 'right',
-                  title: {
-                    display: true,
-                    text: 'Altitude (m)'
-                  },
-                  grid: {
-                    color: 'rgb(200, 200, 200, .25)'
-                  },
-                  ticks: {
-                    color: 'rgb(100, 100, 100)'
-                  }
-                },
-                y_hr: {
-                  display: true,
-                  title: {
-                    display: true,
-                    text: 'Heart Rate (bpm)'
-                  },
-                  grid: {
-                    color: 'rgb(200, 50, 50, .5)'
-                  },
-                  ticks: {
-                    color: 'rgb(200, 50, 50)'
-                  }
-                }
-              },
-              interaction: {
+              tooltip: {
+                enabled: true,
                 mode: 'index',
                 intersect: false,
-              },
-              hover: {
-                mode: 'index',
-                intersect: false
-              },
+              }
             },
+            pointHoverRadius: 5,
+            responsive: true,
+            scales: {
+              x: {
+                type: 'linear',
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Time (h:mm:ss)'
+                },
+                ticks: {
+                  maxTicksLimit: 15,
+                  callback: (value, index, ticks) => formatTime(value)
+                }
+              },
+              y_alt: {
+                display: true,
+                position: 'right',
+                title: {
+                  display: true,
+                  text: 'Altitude (m)'
+                },
+                grid: {
+                  color: 'rgb(200, 200, 200, .25)'
+                },
+                ticks: {
+                  color: 'rgb(100, 100, 100)'
+                }
+              },
+              y_hr: {
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Heart Rate (bpm)'
+                },
+                grid: {
+                  color: 'rgb(200, 50, 50, .5)'
+                },
+                ticks: {
+                  color: 'rgb(200, 50, 50)'
+                }
+              }
+            },
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            hover: {
+              mode: 'index',
+              intersect: false
+            },
+          },
         });
       });
     </script>
   </div>
+  {% endif %}
+
 </div>
 {% endblock %}
