@@ -5,5 +5,6 @@ from .category import Category
 from .stravaactivitystream import StravaActivityStream
 from .activity import Activity
 from .activitysource import ActivitySource
+from .sporttracksactivity import SportTracksActivity
 
-__all__ = ['StravaActivity', 'TrainingLogData', 'WorkoutType', 'Category','StravaActivityStream', 'Activity', 'ActivitySource']
+__all__ = ['StravaActivity', 'TrainingLogData', 'WorkoutType', 'Category','StravaActivityStream', 'Activity', 'ActivitySource', 'SportTracksActivity']
