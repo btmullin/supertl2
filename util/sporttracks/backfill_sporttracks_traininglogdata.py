@@ -43,6 +43,8 @@ CATEGORY_MAP: Dict[str, int] = {
     "Treadmill":   24,
     "Road":        12,
     "Speed":       8,
+    "XC Skate":   4,
+    "XC Classic": 5,
 }
 
 
@@ -72,13 +74,6 @@ def get_candidate_activities(conn: sqlite3.Connection):
       ON sa.activity_id = src.source_activity_id
     -- Ensure ONLY SportTracks for this canonical activity
     WHERE NOT EXISTS (
-        SELECT 1
-        FROM activity_source s2
-        WHERE s2.activity_id = a.id
-          AND s2.source <> 'sporttracks'
-    )
-    -- Ensure no TrainingLogData row yet for this canonical activity
-      AND NOT EXISTS (
         SELECT 1
         FROM TrainingLogData tld
         WHERE tld.canonical_activity_id = a.id
