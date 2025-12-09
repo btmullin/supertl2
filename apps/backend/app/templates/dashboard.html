@@ -24,7 +24,7 @@
       </thead>
       <tbody>
         {% for day in days %}
-        {% set activities = activities_by_day.get(day, []) %}
+          {% set activities = activities_by_day.get(day, []) %}
           {% if not activities %}
             <!-- No activities just get the date -->
             <tr>
@@ -32,33 +32,33 @@
               <td colspan="5"></td>
             </tr>
             {% elif activities|length == 1 %}
-            {% set activity = activities[0] %}
-            <!-- A single activity goes on the same row as the date -->
-            <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
-              <td class="col-date">{{ day.strftime('%A') }}</td>
-              <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
-              <td class="col-name">{{ activity.name }}</td>
-              <td class="col-distance">{{ activity.distance | km }}</td>
-              <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-            </tr>
-          {% else %}
-            <!-- Multiple activities, first row has day of week and daily summary, then each activity gets its own row with just the time -->
-            <tr>
-              <td class="col-date">{{ day.strftime('%A') }}</td>
-              <td colspan="2"></td>
-              <td class="col-distance-summary">{{ daily_summaries[day].total_distance | km }}</td>
-              <td class="col-time-summary">{{ daily_summaries[day].total_moving_s | format_duration }}</td>
-            </tr>
-            {% for activity in activities %}
-            <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
-              <td style="text-align:right;">{{ activity.startDateTime | time_only }}</td>
-              <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
-              <td class="col-name">{{ activity.name }}</td>
-              <td class="col-distance">{{ activity.distance | km }}</td>
-              <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
-            </tr>
-            {% endfor %}
-          {% endif %}
+              {% set activity = activities[0] %}
+              <!-- A single activity goes on the same row as the date -->
+              <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
+                <td class="col-date">{{ day.strftime('%A') }}</td>
+                <td class="col-sport">{{ activity.sport }}</td>
+                <td class="col-name">{{ activity.name }}</td>
+                <td class="col-distance">{{ activity.distance_m | km }}</td>
+                <td class="col-time">{{ activity.moving_time_s | format_duration }}</td>
+              </tr>
+            {% else %}
+              <!-- Multiple activities, first row has day of week and daily summary, then each activity gets its own row with just the time -->
+              <tr>
+                <td class="col-date">{{ day.strftime('%A') }}</td>
+                <td colspan="2"></td>
+                <td class="col-distance-summary">{{ daily_summaries[day].total_distance | km }}</td>
+                <td class="col-time-summary">{{ daily_summaries[day].total_moving_s | format_duration }}</td>
+              </tr>
+              {% for activity in activities %}
+              <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
+                <td style="text-align:right;">{{ activity.start_time_utc | localtime | time_only }}</td>
+                <td class="col-sport">{{ activity.sport }}</td>
+                <td class="col-name">{{ activity.name }}</td>
+                <td class="col-distance">{{ activity.distance_m | km }}</td>
+                <td class="col-time">{{ activity.moving_time_s | format_duration }}</td>
+              </tr>
+              {% endfor %}
+            {% endif %}
         {% endfor %}
         <tr class="summary-row-border-header">
           <td colspan="3">This week</td>

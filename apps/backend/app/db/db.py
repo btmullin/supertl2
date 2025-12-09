@@ -2,6 +2,10 @@
 import sqlite3
 from flask import g
 import os
+from sqlalchemy.orm import joinedload
+from .base import sqla_db
+from ..models.activitysource import ActivitySource
+from ..models import Activity, TrainingLogData
 
 STL_DB = '/app/db/supertl2.db'
 STRAVA_DB = '/stravadb/strava.db'
@@ -108,3 +112,88 @@ def import_strava_data():
     """)
 
     supertl_db.commit()
+
+def get_canonical_activities(limit=100, offset=0):
+    """
+    Return canonical Activity ORM objects with optional TrainingLogData joined.
+    Each row is a tuple: (Activity, TrainingLogData or None)
+    """
+    q = (
+        sqla_db.session.query(Activity, TrainingLogData)
+        .outerjoin(
+            TrainingLogData,
+            TrainingLogData.canonical_activity_id == Activity.id,
+        )
+        .options(
+            joinedload(Activity.sources)  # pre-load Activity.sources to avoid N+1
+        )
+        .order_by(Activity.start_time_utc.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    return q.all()
+
+
+def get_canonical_activity_count():
+    """
+    Return total number of canonical activities.
+    """
+    db = get_stl_db()
+    cur = db.execute("SELECT COUNT(*) AS cnt FROM activity")
+    row = cur.fetchone()
+    return row["cnt"] if row else 0
+
+
+def get_canonical_activity(activity_id: int):
+    """
+    Return a single canonical activity row by id.
+    """
+    db = get_stl_db()
+    cur = db.execute(
+        """
+        SELECT
+            id,
+            start_time_utc,
+            end_time_utc,
+            elapsed_time_s,
+            moving_time_s,
+            distance_m,
+            sport,
+            name,
+            source_quality,
+            created_at_utc,
+            updated_at_utc
+        FROM activity
+        WHERE id = ?
+        """,
+        (activity_id,),
+    )
+    return cur.fetchone()
+
+def get_canonical_id_for_strava_activity(strava_activity_id: str | int) -> int | None:
+    """
+    Given a Strava activityId, return the canonical activity.id, or None.
+    """
+    return (
+        sqla_db.session.query(ActivitySource.activity_id)
+        .filter(
+            ActivitySource.source == "strava",
+            ActivitySource.source_activity_id == str(strava_activity_id),
+        )
+        .scalar()
+    )
+
+def get_strava_activity_id_for_canonical_activity(canonical_id: int) -> str | None:
+    """
+    Given a canonical activity.id, return the Strava activityId, or None.
+    """
+    return (
+        sqla_db.session.query(ActivitySource.source_activity_id)
+        .filter(
+            ActivitySource.activity_id == canonical_id,
+            ActivitySource.source == "strava",
+        )
+        .scalar()
+    )
+

@@ -7,6 +7,7 @@ class TrainingLogData(BaseModel):
     __tablename__ = 'TrainingLogData'
 
     activityId = Column(String, ForeignKey('StravaActivity.activityId'), primary_key=True)
+    canonical_activity_id = Column(Integer, ForeignKey("activity.id"), nullable=True, index=True)
     workoutTypeId = Column(Integer, ForeignKey('WorkoutType.id'), nullable=True)
     categoryId = Column(Integer, ForeignKey('Category.id'), nullable=True)
     notes = Column(Text, nullable=True)
@@ -17,3 +18,4 @@ class TrainingLogData(BaseModel):
     strava_activity = relationship("StravaActivity", back_populates="training_log", uselist=False)
     workout_type = relationship("WorkoutType", back_populates="training_logs")
     category = relationship("Category", back_populates="training_logs")
+    canonical_activity = relationship("Activity", back_populates="training_logs", uselist=False)

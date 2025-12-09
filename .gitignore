@@ -17,3 +17,14 @@ uploads
 # Database
 *.db
 *.db.bak
+
+# Backups
+MANIFEST.txt
+
+# secrets & caches
+.env
+util/sporttracks/st_tcx/cookies.txt
+util/sporttracks/st_tcx/ids.txt
+util/sporttracks/st_tcx/*.tcx
+util/sporttracks/st_tcx/*.json
+*.error.html

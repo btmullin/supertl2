@@ -3,8 +3,8 @@
         "${workspaceFolder}/apps/common"
     ],
     "python.analysis.extraPaths": [
-        "./sources",
-        "./apps/common"
+        "${workspaceFolder}",
+        "${workspaceFolder}/util"
     ],
     "python.terminal.activateEnvironment": false,
 }

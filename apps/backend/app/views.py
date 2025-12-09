@@ -16,18 +16,49 @@ from flask import (
 )
 from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
-from app.db.db import import_strava_data
+from app.db.db import (
+    import_strava_data,
+    get_canonical_activities,
+    get_canonical_activity_count,
+    get_canonical_id_for_strava_activity,
+    get_strava_activity_id_for_canonical_activity
+)
+from app.services.analytics import (
+    summarize_activities,
+    bucket_daily,
+    summarize_by,
+    group_by_category_id,
+    get_start_datetime,
+    get_local_date_for_activity
+) 
+from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .forms.ActivityQueryForm import ActivityQueryFilterForm
-from .models import StravaActivity, WorkoutType, TrainingLogData, Category
+from .models import StravaActivity, WorkoutType, TrainingLogData, Category, Activity, SportTracksActivity
 from .db.base import sqla_db
-from app.services.analytics import summarize_activities, bucket_daily, summarize_by, group_by_category_id
 from .filters import category_path_filter
 
 PER_PAGE = 25
 
 views = Blueprint("views", __name__)
+
+def get_or_create_training_log(activity_id: str) -> TrainingLogData:
+    """
+    Fetch TrainingLogData for the given Strava activityId, or create it if missing.
+    Also ensure canonical_activity_id is populated if we can find a canonical activity.
+    """
+    training_data = sqla_db.session.get(TrainingLogData, activity_id)
+    if not training_data:
+        training_data = TrainingLogData(activityId=activity_id)
+        sqla_db.session.add(training_data)
+
+    if training_data.canonical_activity_id is None:
+        canonical_id = get_canonical_id_for_strava_activity(activity_id)
+        if canonical_id is not None:
+            training_data.canonical_activity_id = canonical_id
+
+    return training_data
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""
@@ -44,13 +75,13 @@ def get_dashboard_context(week_offset=0):
 
     # Fetch activities in date range
     activities = (
-        sqla_db.session.query(StravaActivity)
-        .join(StravaActivity.training_log)  # Only join activities that have a training_log
+        sqla_db.session.query(Activity)
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            func.date(StravaActivity.startDateTime).between(start_of_week, end_of_week)
+            func.date(Activity.start_time_utc).between(start_of_week, end_of_week),
         )
-        .order_by(StravaActivity.startDateTime)
+        .order_by(Activity.start_time_utc)
         .all()
     )
 
@@ -58,27 +89,29 @@ def get_dashboard_context(week_offset=0):
     activities_by_day = defaultdict(list)
     activities_data = []
     for a in activities:
-        day = a.startDateTime.date()
+        day = get_local_date_for_activity(a)
         activities_by_day[day].append(a)
         activities_data.append(a)
 
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
-    daily_summaries = bucket_daily(activities)
-
+    daily_summaries = {
+        day: summarize_activities(activities_by_day[day])
+        for day in days
+    }
     week_summary = summarize_activities(activities)
 
     # Get previous week summaries
     previous_week_start = start_of_week - timedelta(weeks=1)
     previous_week_end = end_of_week - timedelta(weeks=1)
     previous_activities = (
-        sqla_db.session.query(StravaActivity)
-        .join(StravaActivity.training_log)  # Only join activities that have a training_log
+        sqla_db.session.query(Activity)
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            func.date(StravaActivity.startDateTime).between(previous_week_start, previous_week_end)
+            func.date(Activity.start_time_utc).between(previous_week_start, previous_week_end),
         )
-        .order_by(StravaActivity.startDateTime)
+        .order_by(Activity.start_time_utc)
         .all()
     )
 
@@ -129,24 +162,52 @@ def test():
 @views.route("/activity/edit", methods=["GET", "POST"])
 def edit_activity():
     next_url = request.args.get("next") or url_for("views.dashboard")
-    activity_id = request.args.get("id")
-    if not activity_id:
+
+    # ---- Interpret id as canonical Activity.id ----
+    canonical_id_param = request.args.get("id")
+    if not canonical_id_param:
         flash("Missing activity ID.")
         return redirect(url_for("views.dashboard"))
 
-    activity = sqla_db.session.get(StravaActivity, activity_id)
-    if not activity:
+    try:
+        canonical_id = int(canonical_id_param)
+    except ValueError:
+        flash("Invalid activity ID.")
+        return redirect(url_for("views.dashboard"))
+
+    # Ensure the canonical activity exists
+    canonical_activity = sqla_db.session.get(Activity, canonical_id)
+    if not canonical_activity:
         flash("Activity not found.")
         return redirect(next_url)
 
-    activity_data = activity.data or {}
-    summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
+    # ---- Sources: Strava and SportTracks (if any) ----
+    all_sources = list(canonical_activity.sources or [])
+    strava_sources = [s for s in all_sources if s.source == "strava"]
+    sporttracks_sources = [s for s in all_sources if s.source == "sporttracks"]
+
+    # Optional Strava activity (for rich details, map, streams)
+    strava_activity = None
+    summary_polyline = ""
+    if strava_sources:
+        strava_id = strava_sources[0].source_activity_id
+        strava_activity = sqla_db.session.get(StravaActivity, strava_id)
+        if strava_activity:
+            activity_data = strava_activity.data or {}
+            summary_polyline = activity_data.get("map", {}).get("summary_polyline", "")
+
+    # Optional SportTracks activity link could be constructed from source_activity_id
+    sporttracks_activity = None
+    if sporttracks_sources:
+        sporttracks_id = sporttracks_sources[0].source_activity_id
+        sporttracks_activity = sqla_db.session.get(SportTracksActivity, sporttracks_id)
 
     form = EditActivityForm()
 
     # Populate select fields
     form.workoutTypeId.choices = [(0, "—")] + [
-        (w.id, w.name) for w in sqla_db.session.query(WorkoutType).order_by(WorkoutType.name).all()
+        (w.id, w.name)
+        for w in sqla_db.session.query(WorkoutType).order_by(WorkoutType.name).all()
     ]
 
     # Recursive category path query
@@ -165,42 +226,103 @@ def edit_activity():
     """)).fetchall()
     form.categoryId.choices = [(0, "—")] + [(row.id, row.full_path) for row in category_paths]
 
-    if request.method == "GET":
-        form.activityId.data = activity_id
-        existing = sqla_db.session.get(TrainingLogData, activity_id)
-        if existing:
-            form.workoutTypeId.data = existing.workoutTypeId or 0
-            form.categoryId.data = existing.categoryId or 0
-            form.notes.data = existing.notes
-            form.tags.data = existing.tags
-            form.isTraining.data = existing.isTraining if existing.isTraining is not None else 2
-        return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+    # ---------- TrainingLogData helpers (canonical-centric) ----------
 
+    def _find_training_log_for_canonical():
+        """
+        Try to locate an existing TrainingLogData for this canonical activity.
+        1) Prefer canonical_activity_id match
+        2) Fall back to Strava-based record if present
+        """
+        tl = (
+            sqla_db.session.query(TrainingLogData)
+            .filter(TrainingLogData.canonical_activity_id == canonical_activity.id)
+            .one_or_none()
+        )
+        if tl:
+            return tl
+
+        if strava_sources:
+            strava_id = strava_sources[0].source_activity_id
+            return sqla_db.session.get(TrainingLogData, strava_id)
+
+        return None
+
+    def _get_or_create_training_log_for_canonical():
+        """
+        Ensure there is a TrainingLogData row associated with this canonical activity.
+        - If found (by canonical or by Strava id), ensure canonical_activity_id is set.
+        - If not found, create one:
+            * Use Strava activityId if available
+            * Otherwise synthesize an ID from the canonical id
+        """
+        tl = _find_training_log_for_canonical()
+        if tl is None:
+            if strava_sources:
+                activity_id = strava_sources[0].source_activity_id
+            else:
+                activity_id = f"canon-{canonical_activity.id}"
+
+            tl = TrainingLogData(
+                activityId=activity_id,
+                canonical_activity_id=canonical_activity.id,
+            )
+            sqla_db.session.add(tl)
+        else:
+            if tl.canonical_activity_id is None:
+                tl.canonical_activity_id = canonical_activity.id
+
+        return tl
+
+    # ---------- GET: prefill form ----------
+    if request.method == "GET":
+        training_log = _find_training_log_for_canonical()
+
+        # Hidden field can carry canonical id (not currently used server-side)
+        form.activityId.data = canonical_id
+
+        if training_log:
+            form.workoutTypeId.data = training_log.workoutTypeId or 0
+            form.categoryId.data = training_log.categoryId or 0
+            form.notes.data = training_log.notes
+            form.tags.data = training_log.tags
+            form.isTraining.data = (
+                training_log.isTraining if training_log.isTraining is not None else 2
+            )
+
+        return render_template(
+            "editactivity.html",
+            form=form,
+            canonical_activity=canonical_activity,
+            strava_activity=strava_activity,
+            sporttracks_sources=sporttracks_sources,
+            sporttracks_activity=sporttracks_activity,
+            summary_polyline=summary_polyline,
+            training_log=training_log,
+        )
+
+    # ---------- POST: buttons & save ----------
+
+    # Cancel: do nothing
     if form.cancel.data:
         return redirect(next_url)
-    
+
+    # Convenience helper for quick actions
+    def _quicklog():
+        return _get_or_create_training_log_for_canonical()
+
+    # Quick button: General Trail Run
     if form.general_trail.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
-
-        # BTM - TODO: These IDs should be looked up dynamically
-        training_data.workoutTypeId = 1  # General
-        training_data.categoryId = 10  # Trail Running
-        training_data.isTraining = 1  # Mark as training
-
+        training_data = _quicklog()
+        training_data.workoutTypeId = 1   # General
+        training_data.categoryId = 10     # Trail Running
+        training_data.isTraining = 1
         sqla_db.session.commit()
-
         return redirect(next_url)
 
+    # Quick button: General MTB / Gravel / Virtual bike
     if form.general_mountain_bike.data or form.general_gravel_bike.data or form.general_virtual_bike.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
-
-        # BTM - TODO: These IDs should be looked up dynamically
+        training_data = _quicklog()
         training_data.workoutTypeId = 1  # General
         if form.general_gravel_bike.data:
             training_data.categoryId = 13  # Gravel Biking
@@ -208,88 +330,76 @@ def edit_activity():
             training_data.categoryId = 14  # Mountain Biking
         else:
             training_data.categoryId = 18  # Virtual Biking
-        training_data.isTraining = 1  # Mark as training
-
+        training_data.isTraining = 1
         sqla_db.session.commit()
-
         return redirect(next_url)
 
+    # Quick button: Strength
     if form.strength.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
-
-        # BTM - TODO: These IDs should be looked up dynamically
-        training_data.workoutTypeId = 6  # Strength
-        training_data.categoryId = 15  # Strength Training
-        training_data.isTraining = 1  # Mark as training
-
+        training_data = _quicklog()
+        training_data.workoutTypeId = 6   # Strength
+        training_data.categoryId = 15     # Strength Training
+        training_data.isTraining = 1
         sqla_db.session.commit()
-
         return redirect(next_url)
 
+    # Quick button: L3 roller (classic or skate)
     if form.l3_classic_roller.data or form.l3_skate_roller.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
-
-        # BTM - TODO: These IDs should be looked up dynamically
+        training_data = _quicklog()
         training_data.workoutTypeId = 2  # L3
         if form.l3_classic_roller.data:
             training_data.categoryId = 7  # L3 Classic Roller Ski
         else:
             training_data.categoryId = 6  # L3 Skate Roller Ski
-        training_data.isTraining = 1  # Mark as training
-
+        training_data.isTraining = 1
         sqla_db.session.commit()
-
         return redirect(next_url)
 
+    # Quick button: General Skate/Classic snow ski
     if form.general_skate_ski.data or form.general_classic_ski.data:
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
-
-        # BTM - TODO: These IDs should be looked up dynamically
+        training_data = _quicklog()
         training_data.workoutTypeId = 1  # General
         if form.general_classic_ski.data:
             training_data.categoryId = 5  # Classic Snow Ski
         else:
             training_data.categoryId = 4  # Skate Snow Ski
-        training_data.isTraining = 1  # Mark as training
-
+        training_data.isTraining = 1
         sqla_db.session.commit()
-
         return redirect(next_url)
 
+    # Normal submit: use full form values
     if form.validate_on_submit():
-        workout_id = form.workoutTypeId.data or None
-        category_id = form.categoryId.data or None
+        training_data = _get_or_create_training_log_for_canonical()
 
-        training_data = sqla_db.session.get(TrainingLogData, activity_id)
-        if not training_data:
-            training_data = TrainingLogData(activityId=activity_id)
-            sqla_db.session.add(training_data)
-
-        training_data.workoutTypeId = workout_id
-        training_data.categoryId = category_id
+        training_data.workoutTypeId = form.workoutTypeId.data or None
+        training_data.categoryId = form.categoryId.data or None
         training_data.notes = form.notes.data
         training_data.tags = form.tags.data
         training_data.isTraining = form.isTraining.data
 
         sqla_db.session.commit()
-
         flash("Metadata updated.")
         return redirect(next_url)
 
-    return render_template("editactivity.html", form=form, activityId=activity_id, activity=activity, summary_polyline=summary_polyline)
+    # If we get here, POST didn't match any button/validation; redisplay form
+    training_log = _find_training_log_for_canonical()
+    return render_template(
+        "editactivity.html",
+        form=form,
+        canonical_activity=canonical_activity,
+        strava_activity=strava_activity,
+        sporttracks_sources=sporttracks_sources,
+        sporttracks_activity=sporttracks_activity,
+        summary_polyline=summary_polyline,
+        training_log=training_log,
+    )
 
 @views.route("/admin/import-strava")
 def import_strava():
     import_strava_data()
+
+    from apps.backend.app.db.db import STL_DB
+    result = backfill_new_strava(db_path=STL_DB)
 
     flash(f"Imported new activities.")
     return redirect(url_for("views.activitylist"))
@@ -299,19 +409,11 @@ def activitylist():
     page = request.args.get('page', 1, type=int)
     offset = (page - 1) * PER_PAGE
     # Fetch activities in date range
-    activities = (
-        sqla_db.session.query(StravaActivity)
-        .order_by(StravaActivity.startDateTime.desc())
-        .limit(PER_PAGE)
-        .offset(offset)
-        .all()
-    )
+    rows = get_canonical_activities(limit=PER_PAGE, offset=offset)
+    total = get_canonical_activity_count()
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE if total > 0 else 1
 
-    # Get total number of rows
-    total = sqla_db.session.query(func.count(StravaActivity.activityId)).scalar()
-    total_pages = (total + PER_PAGE - 1) // PER_PAGE
-    
-    return render_template("activitylist.html", activities=activities, page=page, total_pages=total_pages)
+    return render_template("activitylist.html", activities=rows, page=page, total_pages=total_pages)
 
 @views.route("/query", methods=["GET"])
 def activity_query():
