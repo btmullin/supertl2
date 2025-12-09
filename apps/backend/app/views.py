@@ -4,7 +4,7 @@ import os
 import sys
 import json
 from datetime import datetime, timedelta, time
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from flask import (
     Blueprint,
     render_template,
@@ -442,6 +442,7 @@ def activity_query():
         activities = None
         summary = None
         category_summary = None
+        category_depths = None
         query_filter = None
 
     else:
@@ -491,7 +492,82 @@ def activity_query():
 
         activities = q.all()
         summary = summarize_activities(activities)
-        category_summary = summarize_by(activities, group_by_category_id)
+
+        # Build hierarchical category summary: each category row includes
+        # activities directly in that category PLUS all activities in its
+        # descendant subcategories.
+        if activities:
+            acts = list(activities)
+
+            # Group activities by their direct category id (including None)
+            direct_groups = defaultdict(list)
+            for a in acts:
+                cid = group_by_category_id(a)
+                direct_groups[cid].append(a)
+
+            # Load the category tree (id, parent_id)
+            cats = sqla_db.session.query(Category.id, Category.parent_id).all()
+            children = defaultdict(list)  # parent_id -> [child_id]
+            for cid, parent_id in cats:
+                children[parent_id].append(cid)
+
+            # Helper: gather all activities for a category and its descendants
+            def gather_activities_for_category(root_cid: int):
+                stack = [root_cid]
+                acc = []
+                while stack:
+                    current = stack.pop()
+                    acc.extend(direct_groups.get(current, []))
+                    stack.extend(children.get(current, []))
+                return acc
+
+            raw_summary = {}
+
+            # Inclusive summary for every defined category
+            for cid, parent_id in cats:
+                cat_acts = gather_activities_for_category(cid)
+                if cat_acts:
+                    raw_summary[cid] = summarize_activities(cat_acts)
+
+            # Handle uncategorized (cid is None) separately; it has no children
+            if direct_groups.get(None):
+                raw_summary[None] = summarize_activities(direct_groups[None])
+
+            # Compute depth for indentation in the template (root depth = 0)
+            category_depths = {}
+
+            def assign_depths(parent_id, depth: int):
+                for cid in children.get(parent_id, []):
+                    category_depths[cid] = depth
+                    assign_depths(cid, depth + 1)
+
+            assign_depths(None, 0)
+
+            # Order categories in a tree-friendly way (root -> children DFS)
+            name_lookup = dict(
+                sqla_db.session.query(Category.id, Category.name).all()
+            )
+            ordered = OrderedDict()
+
+            def add_with_children(parent_id):
+                # sort siblings by name for stable ordering
+                for cid in sorted(children.get(parent_id, []), key=lambda x: name_lookup.get(x, "")):
+                    if cid in raw_summary:
+                        ordered[cid] = raw_summary[cid]
+                    add_with_children(cid)
+
+            # Start from roots (parent_id is NULL)
+            add_with_children(None)
+
+            # Put uncategorized at the bottom if present
+            if None in raw_summary:
+                ordered[None] = raw_summary[None]
+
+            category_summary = ordered
+        else:
+            summary = None
+            category_summary = None
+            category_depths = {}
 
     return render_template(
         "query.html",
@@ -499,8 +575,10 @@ def activity_query():
         activities=activities,
         summary=summary,
         category_summary=category_summary,
+        category_depths=category_depths,
         query_filter=query_filter,
     )
+
 
 @views.route("/addcategory", methods=["GET", "POST"])
 def add_category():
