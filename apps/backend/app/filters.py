@@ -22,6 +22,7 @@ Functions:
 
 from flask import g
 from .services.category_paths import build_category_cache, category_full_path_from_id
+from .services.analytics import get_primary_training_log
 from .models.category import Category
 from .db.base import sqla_db
 from datetime import datetime
@@ -136,18 +137,18 @@ def describe_object(obj):
 
 def displaySportOrCategory(activity):
     """
-    Returns the sport type if no associated training log is found, otherwise returns the category in the training log.
+    Returns the sport type if no associated training log is found,
+    otherwise returns the category in the primary training log.
 
-    Args:
-        activity (object): An activity object with a sportType attribute.
-
-    Returns:
-        str: The sport type or category of the activity.
+    Works for StravaActivity and canonical Activity.
     """
-    if activity.training_log is not None:
-        return activity.training_log.category.full_path() if activity.training_log.category else "⚠️ No Category"
+    tl = get_primary_training_log(activity)
+    if tl is not None and getattr(tl, "category", None):
+        return tl.category.full_path()
 
-    return activity.sportType
+    # Fallback to sport field on canonical or Strava
+    sport = getattr(activity, "sport", None) or getattr(activity, "sportType", None)
+    return sport or "Unknown"
 
 def category_path_filter(cat_or_id, sep=" : "):
     # If a Category object is provided, use its method (already in your model)

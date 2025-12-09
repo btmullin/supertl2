@@ -41,6 +41,33 @@ def _get_sport(a: _Any) -> str:
         return getattr(a, "sport") or "Unknown"
     return getattr(a, "sportType", None) or "Unknown"
 
+def get_primary_training_log(a: _Any):
+    """
+    Return the most relevant TrainingLogData for an activity-like object.
+
+    Works for:
+      - StravaActivity with .training_log (1:1)
+      - canonical Activity with .training_logs (0..N)
+    """
+    # StravaActivity-style
+    tl = getattr(a, "training_log", None)
+    if tl is not None:
+        return tl
+
+    # Canonical Activity-style
+    tls = getattr(a, "training_logs", None)
+    if tls:
+        # Prefer one with a category or explicit isTraining flag
+        for candidate in tls:
+            if getattr(candidate, "categoryId", None) is not None:
+                return candidate
+            if getattr(candidate, "isTraining", None) in (0, 1):
+                return candidate
+        # Fallback: first one
+        return tls[0]
+
+    return None
+
 def get_local_date_for_activity(a):
     """
     Convert an Activity's start time to local (America/Chicago) date.
@@ -184,11 +211,11 @@ def group_by_sport(a: Any) -> str:
     return getattr(a, "sportType", None) or "Unknown"
 
 def group_by_category_id(a: Any) -> Optional[int]:
-    tl = getattr(a, "training_log", None)
+    tl = get_primary_training_log(a)
     return getattr(tl, "categoryId", None) if tl else None
 
 def group_by_workout_type_id(a: Any) -> Optional[int]:
-    tl = getattr(a, "training_log", None)
+    tl = get_primary_training_log(a)
     return getattr(tl, "workoutTypeId", None) if tl else None
 
 # Simple humanizers you can use in Jinja

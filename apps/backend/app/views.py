@@ -4,7 +4,7 @@ import os
 import sys
 import json
 from datetime import datetime, timedelta, time
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from flask import (
     Blueprint,
     render_template,
@@ -29,7 +29,8 @@ from app.services.analytics import (
     summarize_by,
     group_by_category_id,
     get_start_datetime,
-    get_local_date_for_activity
+    get_local_date_for_activity,
+    get_primary_training_log,
 ) 
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
@@ -423,7 +424,7 @@ def activity_query():
     show_form = not bool(request.args)
 
     if show_form:
-        # Recursive category path query
+        # Recursive category path query, for the category multi-select
         category_paths = sqla_db.session.execute(text("""
             WITH RECURSIVE category_path(id, name, parent_id, full_path) AS (
                 SELECT id, name, parent_id, name
@@ -442,56 +443,157 @@ def activity_query():
         activities = None
         summary = None
         category_summary = None
+        category_depths = None
         query_filter = None
 
     else:
-        # Build query
+        from sqlalchemy.orm import joinedload
+        from collections import defaultdict, OrderedDict
+
         query_filter = []
-        q = sqla_db.session.query(StravaActivity).options(
-            joinedload(StravaActivity.training_log)  # avoid N+1 when showing tags/category
-        )
 
-        joined_tl = False
-
-        # Categories (requires join)
+        # Build human-readable list of selected filters
         if form.categories.data:
-            query_filter.append(("Categories", ", ".join(category_path_filter(c) for c in form.categories.data)))
-            q = q.join(StravaActivity.training_log)
-            joined_tl = True
-            q = q.filter(TrainingLogData.categoryId.in_(form.categories.data))
+            query_filter.append((
+                "Categories",
+                ", ".join(category_path_filter(c) for c in form.categories.data),
+            ))
 
-        # Training flag (requires join)
         if form.is_training.data in ("1", "0"):
-            query_filter.append(("Is Training", ("Yes" if form.is_training.data == "1" else "No")))
-            if not joined_tl:
-                q = q.join(StravaActivity.training_log)
-                joined_tl = True
-            q = q.filter(TrainingLogData.isTraining == int(form.is_training.data))
+            query_filter.append((
+                "Is Training",
+                "Yes" if form.is_training.data == "1" else "No",
+            ))
 
-        # Date range (inclusive of end date)
         if form.date_start.data:
             query_filter.append(("From", form.date_start.data.strftime("%Y-%m-%d")))
-            start_dt = datetime.combine(form.date_start.data, time.min)
-            q = q.filter(StravaActivity.startDateTime >= start_dt)
         if form.date_end.data:
             query_filter.append(("To", form.date_end.data.strftime("%Y-%m-%d")))
-            # Use exclusive upper bound midnight next day to include the whole end date
-            end_dt = datetime.combine(form.date_end.data + timedelta(days=1), time.min)
-            q = q.filter(StravaActivity.startDateTime < end_dt)
 
         if form.min_time.data:
             query_filter.append(("Min Time (minutes)", str(form.min_time.data)))
-            q = q.filter(StravaActivity.movingTimeInSeconds >= form.min_time.data * 60)
         if form.max_time.data:
             query_filter.append(("Max Time (minutes)", str(form.max_time.data)))
-            q = q.filter(StravaActivity.movingTimeInSeconds <= form.max_time.data * 60)
 
-        # Order
-        q = q.order_by(StravaActivity.startDateTime.asc())
+        # Fetch all canonical activities with training_logs preloaded.
+        # (We filter in Python for now; DB size is modest and this keeps
+        # the logic simple & canonical-friendly.)
+        base_q = sqla_db.session.query(Activity).options(
+            joinedload(Activity.training_logs)
+        )
+        all_activities = base_q.all()
 
-        activities = q.all()
+        filtered = []
+        for a in all_activities:
+            tl = get_primary_training_log(a)
+
+            # Category filter (match on TrainingLogData.categoryId)
+            if form.categories.data:
+                cat_id = getattr(tl, "categoryId", None) if tl else None
+                if cat_id not in form.categories.data:
+                    continue
+
+            # Training flag filter (TrainingLogData.isTraining)
+            if form.is_training.data in ("1", "0"):
+                wanted = int(form.is_training.data)
+                is_tr = getattr(tl, "isTraining", None) if tl else None
+                if is_tr != wanted:
+                    continue
+
+            # Date filters use local date (America/Chicago)
+            if form.date_start.data or form.date_end.data:
+                local_date = get_local_date_for_activity(a)
+                if form.date_start.data and (local_date is None or local_date < form.date_start.data):
+                    continue
+                if form.date_end.data and (local_date is None or local_date > form.date_end.data):
+                    continue
+
+            # Time filters use canonical moving_time_s (seconds)
+            if form.min_time.data:
+                if a.moving_time_s is None or a.moving_time_s < form.min_time.data * 60:
+                    continue
+            if form.max_time.data:
+                if a.moving_time_s is None or a.moving_time_s > form.max_time.data * 60:
+                    continue
+
+            filtered.append(a)
+
+        # Sort ascending by start datetime (using canonical helper)
+        filtered.sort(key=lambda x: get_start_datetime(x) or datetime.min)
+
+        activities = filtered
         summary = summarize_activities(activities)
-        category_summary = summarize_by(activities, group_by_category_id)
+
+        # ---- Hierarchical category summary (inclusive totals) ----
+
+        if activities:
+            acts = list(activities)
+
+            # Group activities by direct category id
+            direct_groups = defaultdict(list)
+            for a in acts:
+                cid = group_by_category_id(a)
+                direct_groups[cid].append(a)
+
+            # Load the category tree (id, parent_id)
+            cats = sqla_db.session.query(Category.id, Category.parent_id).all()
+            children = defaultdict(list)   # parent_id -> [child_id]
+            for cid, parent_id in cats:
+                children[parent_id].append(cid)
+
+            def gather_activities_for_category(root_cid: int):
+                stack = [root_cid]
+                acc = []
+                while stack:
+                    current = stack.pop()
+                    acc.extend(direct_groups.get(current, []))
+                    stack.extend(children.get(current, []))
+                return acc
+
+            raw_summary = {}
+
+            # Inclusive summary for each defined category
+            for cid, parent_id in cats:
+                cat_acts = gather_activities_for_category(cid)
+                if cat_acts:
+                    raw_summary[cid] = summarize_activities(cat_acts)
+
+            # Handle uncategorized activities (no TrainingLogData category)
+            if direct_groups.get(None):
+                raw_summary[None] = summarize_activities(direct_groups[None])
+
+            # Depth for indentation (root depth = 0)
+            category_depths = {}
+
+            def assign_depths(parent_id, depth: int):
+                for cid in children.get(parent_id, []):
+                    category_depths[cid] = depth
+                    assign_depths(cid, depth + 1)
+
+            assign_depths(None, 0)
+
+            # Order categories in tree order (parent then children)
+            name_lookup = dict(
+                sqla_db.session.query(Category.id, Category.name).all()
+            )
+            ordered = OrderedDict()
+
+            def add_with_children(parent_id):
+                for cid in sorted(children.get(parent_id, []), key=lambda x: name_lookup.get(x, "")):
+                    if cid in raw_summary:
+                        ordered[cid] = raw_summary[cid]
+                    add_with_children(cid)
+
+            add_with_children(None)
+
+            # Put uncategorized at the bottom if present
+            if None in raw_summary:
+                ordered[None] = raw_summary[None]
+
+            category_summary = ordered
+        else:
+            category_summary = None
+            category_depths = {}
 
     return render_template(
         "query.html",
@@ -499,8 +601,11 @@ def activity_query():
         activities=activities,
         summary=summary,
         category_summary=category_summary,
+        # if you’re using indentation; otherwise you can drop this
+        category_depths=category_depths if not show_form else None,
         query_filter=query_filter,
     )
+
 
 @views.route("/addcategory", methods=["GET", "POST"])
 def add_category():
