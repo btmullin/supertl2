@@ -1,48 +1,52 @@
 {% extends 'base.html' %} {% block content %}
 <div class="whole-body">
   <!-- Navigation -->
-   <div class="section">
-  <div class="week-nav">
-    <span>
-      Week of {{ start_of_week.strftime('%B %d, %Y') }}
-    </span>
-    <a href="{{ url_for('views.dashboard', week_offset=week_offset - 1) }}">&laquo; Previous Week</a>
-    <a href="{{ url_for('views.dashboard', week_offset=week_offset + 1) }}">Next Week &raquo;</a>
-    <a href="{{ url_for('views.dashboard', week_offset=0) }}">Current Week</a>
-  </div>
-</div>
   <div class="section">
-    <table class="styled-table">
-      <thead>
-        <tr>
-          <th class="col-date">Day/Time</th>
-          <th class="col-sport">Sport</th>
-          <th class="col-name">Name</th>
-          <th class="col-distance">Distance</th>
-          <th class="col-time">Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for day in days %}
-          {% set activities = activities_by_day.get(day, []) %}
-          {% if not activities %}
-            <!-- No activities just get the date -->
-            <tr>
-              <td class="col-date">{{ day.strftime('%A') }}</td>
-              <td colspan="5"></td>
-            </tr>
+    <div class="week-nav">
+      <span>
+        Week of {{ start_of_week.strftime('%B %d, %Y') }}
+      </span>
+      <a href="{{ url_for('views.dashboard', week_offset=week_offset - 1) }}">&laquo; Previous Week</a>
+      <a href="{{ url_for('views.dashboard', week_offset=week_offset + 1) }}">Next Week &raquo;</a>
+      <a href="{{ url_for('views.dashboard', week_offset=0) }}">Current Week</a>
+    </div>
+  </div>
+
+  <!-- Main layout: table on the left, summary + chart on the right -->
+  <div class="section dashboard-layout">
+    <!-- Left: day-by-day table -->
+    <div class="dashboard-main">
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th class="col-date">Day/Time</th>
+            <th class="col-sport">Sport</th>
+            <th class="col-name">Name</th>
+            <th class="col-distance">Distance</th>
+            <th class="col-time">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for day in days %}
+            {% set activities = activities_by_day.get(day, []) %}
+            {% if not activities %}
+              <!-- No activities just get the date -->
+              <tr>
+                <td class="col-date">{{ day.strftime('%A') }}</td>
+                <td colspan="5"></td>
+              </tr>
             {% elif activities|length == 1 %}
               {% set activity = activities[0] %}
               <!-- A single activity goes on the same row as the date -->
               <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
                 <td class="col-date">{{ day.strftime('%A') }}</td>
-                <td class="col-sport">{{ activity.sport }}</td>
+                <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
                 <td class="col-name">{{ activity.name }}</td>
                 <td class="col-distance">{{ activity.distance_m | km }}</td>
                 <td class="col-time">{{ activity.moving_time_s | format_duration }}</td>
               </tr>
             {% else %}
-              <!-- Multiple activities, first row has day of week and daily summary, then each activity gets its own row with just the time -->
+              <!-- Multiple activities: one summary row + one row per activity -->
               <tr>
                 <td class="col-date">{{ day.strftime('%A') }}</td>
                 <td colspan="2"></td>
@@ -52,24 +56,174 @@
               {% for activity in activities %}
               <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
                 <td style="text-align:right;">{{ activity.start_time_utc | localtime | time_only }}</td>
-                <td class="col-sport">{{ activity.sport }}</td>
+                <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
                 <td class="col-name">{{ activity.name }}</td>
                 <td class="col-distance">{{ activity.distance_m | km }}</td>
                 <td class="col-time">{{ activity.moving_time_s | format_duration }}</td>
               </tr>
               {% endfor %}
             {% endif %}
-        {% endfor %}
-        <tr class="summary-row-border-header">
-          <td colspan="3">This week</td>
-          <td class="col-distance">{{ week_summary.total_distance | km }}</td>
-          <td class="col-time">{{ week_summary.total_moving_s | format_duration }}</td>
-        </tr>
-        <tr>
-          <td colspan="3">Previous week</td>
-          <td class="col-distance">{{ previous_week_summary.total_distance | km }}</td>
-          <td class="col-time">{{ previous_week_summary.total_moving_s | format_duration }}</td>
-      </tbody> 
-    </table>
+          {% endfor %}
+          <tr class="summary-row-border-header">
+            <td colspan="3">This week</td>
+            <td class="col-distance">{{ week_summary.total_distance | km }}</td>
+            <td class="col-time">{{ week_summary.total_moving_s | format_duration }}</td>
+          </tr>
+          <tr>
+            <td colspan="3">Previous week</td>
+            <td class="col-distance">{{ previous_week_summary.total_distance | km }}</td>
+            <td class="col-time">{{ previous_week_summary.total_moving_s | format_duration }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Right: summary tables + weekly bar chart -->
+    <div class="dashboard-side">
+      <table class="summary-table week-summary-table">
+        <thead>
+          <tr>
+            <th>Weekly Summary</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td># of workouts</td>
+            <td>{{ week_summary.count }}</td>
+          </tr>
+          <tr>
+            <td>Total time</td>
+            <td class="col-time">{{ week_summary.total_moving_s | format_duration }}</td>
+          </tr>
+          <tr>
+            <td>Total distance</td>
+            <td class="col-distance">{{ week_summary.total_distance | km }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="summary-table week-summary-table">
+        <thead>
+          <tr>
+            <th>Weekly Category Breakdown</th>
+            <th># Activities</th>
+            <th class="col-time">Time</th>
+            <th class="col-distance">Distance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cat_id, summary in category_summaries | dictsort %}
+          <tr>
+            <td>
+              {# Convert category id -> "Parent : Child : Leaf" using the category_path filter #}
+              {{ cat_id | category_path }}
+            </td>
+            <td>{{ summary.count }}</td>
+            <td class="col-time">{{ summary.total_moving_s | format_duration }}</td>
+            <td class="col-distance">{{ summary.total_distance | km }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h4>Weekly Volume (hours)</h4>
+      <div class="weekly-chart-container">
+        <canvas id="weeklyTimeChart"></canvas>
+      </div>
+    </div>
   </div>
+</div>
+
+<!-- Chart.js + weekly time bar chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  (function() {
+    const weeklySeries = {{ weekly_series | tojson }};
+    const weeks = weeklySeries.weeks || [];
+    const currentIndex = weeklySeries.current_index || 0;
+
+    if (!weeks.length) {
+      return;
+    }
+
+    const labels = weeks.map(w => w.label);
+    const data = weeks.map(w => w.total_hours);
+
+    const ctx = document.getElementById('weeklyTimeChart').getContext('2d');
+
+    // Read theme colors from CSS variables
+    const rootStyles = getComputedStyle(document.documentElement);
+    const themePrimary = rootStyles.getPropertyValue('--theme-color-primary').trim();
+    const themePrimaryBorder = themePrimary.replace('0.9', '1').replace('0.8', '1');
+    const themeRadius = parseInt(rootStyles.getPropertyValue('--theme-corner-radius')) || 6;
+
+    const backgroundColors = labels.map((_, idx) =>
+      idx === currentIndex
+        ? themePrimary        // highlighted bar uses theme color
+        : 'rgba(201, 203, 207, 0.9)'  // default bar color stays neutral
+    );
+
+    const borderColors = labels.map((_, idx) =>
+      idx === currentIndex
+        ? themePrimaryBorder  // slightly stronger border version of theme
+        : 'rgba(201, 203, 207, 1)'
+    );
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Weekly time (hours)',
+          data: data,
+          backgroundColor: backgroundColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+          borderRadius: themeRadius,
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            grid: {
+              display: false    // ← removes x-axis grid lines
+            },
+            ticks: {
+              maxRotation: 0,
+              minRotation: 0
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Hours'
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const v = context.raw || 0;
+                return ' ' + v.toFixed(1) + ' h';
+              }
+            }
+          }
+        },
+        // Make bars nearly full width
+        datasets: {
+          bar: {
+            // Chart.js 3+ supports categorySpacing / barPercentage in this form
+            categoryPercentage: 0.9,  // default 0.8 → makes bars fill category width
+            barPercentage: 1.0       // default 0.9 → even thicker bars
+          }
+        }
+      }
+    });
+  })();
+</script>
 {% endblock %}
