@@ -75,12 +75,22 @@
         </tr>
       </thead>
       {% for activity in activities %}
-      <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.activityId, next=request.full_path) }}'" style="cursor: pointer;">
-          <td class="col-date-time">{{ activity.startDateTime | pretty_datetime }}</td>
-          <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
-          <td class="col-name">{{ activity.name }}</td>
-          <td class="col-distance">{{ activity.distance | km }}</td>
-          <td class="col-time">{{ activity.movingTimeInSeconds | format_duration }}</td>
+      <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
+        <td class="col-date-time">
+          {{ activity.start_time_utc | localtime | pretty_datetime }}
+        </td>
+        <td class="col-sport">
+          {{ activity | displaySportOrCategory }}
+        </td>
+        <td class="col-name">
+          {{ activity.name }}
+        </td>
+        <td class="col-distance">
+          {{ activity.distance_m | km }}
+        </td>
+        <td class="col-time">
+          {{ activity.moving_time_s | format_duration }}
+        </td>
       </tr>
       {% endfor %}
       <!-- Add the totals row -->
@@ -94,19 +104,21 @@
   <hr>
   <div class="section">
     <table class="styled-table">
-      <tr class="summary-row-border-header">
-        <th>Category</th>
-        <th class="col-distance">Distance</th>
-        <th class="col-time">Time</th>
-      </tr>
+      <thead>
+        <tr class="summary-row-border-header">
+          <th>Category</th>
+          <th class="col-distance">Distance</th>
+          <th class="col-time">Time</th>
+        </tr>
+      </thead>
       {% for cat, cat_summary in category_summary.items() %}
       <tr>
-          <td class="col-name"
-              style="padding-left: {{ category_depths.get(cat, 0) * 1.5 }}rem;">
-              {{ cat | category_path }}
-          </td>
-          <td class="col-distance">{{ cat_summary.total_distance | km }}</td>
-          <td class="col-time">{{ cat_summary.total_moving_s | format_duration }}</td>
+        <td class="col-name"
+            style="padding-left: {{ (category_depths.get(cat, 0) if category_depths else 0) * 1.5 }}rem;">
+          {{ cat | category_path }}
+        </td>
+        <td class="col-distance">{{ cat_summary.total_distance | km }}</td>
+        <td class="col-time">{{ cat_summary.total_moving_s | format_duration }}</td>
       </tr>
       {% endfor %}
     </table>
