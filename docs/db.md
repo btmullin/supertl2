@@ -1,84 +1,137 @@
-Canonical DB: supertl2.db
+# supertl2.db – Canonical Database Overview
 
-Key tables:
+This document describes the **canonical training log database** (`supertl2.db`).
 
-activity – one row per real workout
+The design has three main layers:
 
-activity_source – one row per source per workout
+1. **Canonical core**  
+   - `activity` – one row per real-world workout  
+   - `activity_source` – one row per source per workout  
+   - Views (`v_activity_sources`, `v_activity_best`)
 
-source ∈ ('strava','sporttracks')
+2. **Training metadata / annotations**  
+   - `WorkoutType` – controlled vocabulary of workout types  
+   - `Category` – hierarchical activity categories  
+   - `TrainingLogData` – per-activity metadata (notes, tags, training flag, canonical link)
 
-source_activity_id == StravaActivity.activityId when source='strava'
+3. **Source / staging tables**  
+   - `StravaActivity`, `StravaActivityStream` – clone of stats-for-strava tables  
+   - `sporttracks_activity` – SportTracks import table
 
-StravaActivity – clone of stats-for-strava’s Activity
+---
 
-TrainingLogData – extra metadata keyed by Strava activityId, with optional canonical_activity_id → activity.id
+## 1. Canonical Core
 
-Important invariants we now have:
+### 1.1 `activity`
 
-Every row in StravaActivity has a corresponding activity_source row except the ones you explicitly haven’t imported (currently 0).
+**Purpose:**  
+One row per real-world workout, in canonical UTC time. This is the central table that the rest of the system should reference.
 
-Every canonical activity row that originated from Strava has a corresponding activity_source row with:
+**Key points:**
 
-source = 'strava'
+- `start_time_utc` is the canonical time reference (ISO8601 UTC string).
+- `distance_m`, `elapsed_time_s`, etc. can be derived from sources or stored canonically.
+- `name` and `sport` are canonical / preferred values, not necessarily verbatim from any one source.
+- `source_quality` can be used as a heuristic on how “trustworthy” the canonical values are.
 
-source_activity_id = StravaActivity.activityId
+**Schema (summary):**
 
+- `id INTEGER PRIMARY KEY`
+- `start_time_utc TEXT NOT NULL`
+- `end_time_utc TEXT`
+- `elapsed_time_s INTEGER`
+- `moving_time_s INTEGER`
+- `distance_m REAL`
+- `name TEXT`
+- `sport TEXT`
+- `source_quality INTEGER DEFAULT 0`
+- `created_at_utc TEXT NOT NULL DEFAULT utcnow`
+- `updated_at_utc TEXT NOT NULL DEFAULT utcnow`
 
-## Utils
+**Indexes:**
 
-### Check for any unmapped Strava rows
+- `ix_activity_start` on `(start_time_utc)`
+- `ix_activity_sport` on `(sport)`
+
+**Trigger:**
+
+- `trg_activity_mtime` updates `updated_at_utc` on every row update.
+
+---
+
+### 1.2 `activity_source`
+
+**Purpose:**  
+Represents how a given real-world activity appears in each source system (Strava, SportTracks, etc.). There is typically:
+
+- 0–1 Strava rows per `activity`
+- 0–1 SportTracks rows per `activity`
+- Possibly other sources in the future.
+
+**Key points:**
+
+- `source` is currently constrained to `('strava','sporttracks')`.
+- `source_activity_id` is the original source key:
+  - Strava: `StravaActivity.activityId`
+  - SportTracks: `sporttracks_activity.activity_id`
+- There is a **unique constraint** on `(source, source_activity_id)` to prevent duplicates.
+- The table includes optional fields (`distance_m`, `elapsed_time_s`, `sport`, etc.) to allow quick comparisons and merging logic.
+
+**Schema (summary):**
+
+- `id INTEGER PRIMARY KEY`
+- `activity_id INTEGER NOT NULL` → `activity.id`
+- `source TEXT NOT NULL CHECK (source IN ('strava','sporttracks'))`
+- `source_activity_id TEXT NOT NULL`
+- `start_time_utc TEXT`
+- `start_time_local TEXT`
+- `elapsed_time_s INTEGER`
+- `distance_m REAL`
+- `sport TEXT`
+- `payload_hash TEXT`
+- `ingested_at_utc TEXT NOT NULL DEFAULT utcnow`
+- `match_confidence TEXT`
+- `UNIQUE (source, source_activity_id)`
+- `FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE`
+
+**Indexes:**
+
+- `ix_as_activity_id` on `(activity_id)`
+- `ix_as_start` on `(start_time_utc)`
+- `ix_as_elapsed` on `(elapsed_time_s)`
+- `ix_as_distance` on `(distance_m)`
+- `ix_as_sport` on `(sport)`
+
+---
+
+### 1.3 Views
+
+#### `v_activity_sources`
+
+**Purpose:**  
+Quickly show how many sources each canonical activity has, plus basic flags for Strava and SportTracks coverage.
+
+**Columns (derived):**
+
+- `activity_id`
+- `start_time_utc`
+- `sport`
+- `name`
+- `source_count`
+- `has_strava` (0/1)
+- `has_sporttracks` (0/1)
+
+**Definition (conceptual):**
 
 ```sql
-SELECT COUNT(*) AS unmapped_strava
-FROM StravaActivity s
-LEFT JOIN activity_source src
-  ON src.source = 'strava'
- AND src.source_activity_id = s.activityId
-WHERE src.activity_id IS NULL;
-```
-
-### Check for any canonical activities with no source
-
-```sql
-SELECT COUNT(*) AS sourceless_activities
+SELECT
+  a.id AS activity_id,
+  a.start_time_utc,
+  a.sport,
+  a.name,
+  COUNT(*) AS source_count,
+  SUM(s.source='strava')      AS has_strava,
+  SUM(s.source='sporttracks') AS has_sporttracks
 FROM activity a
-LEFT JOIN activity_source src
-  ON src.activity_id = a.id
-WHERE src.id IS NULL;
-```
-
-### Spot TrainingLogData entries not yet linked to canonical
-
-```sql
-SELECT COUNT(*) AS tld_unlinked
-FROM TrainingLogData t
-LEFT JOIN activity_source src
-  ON src.source = 'strava'
- AND src.source_activity_id = t.activityId
-LEFT JOIN activity a
-  ON a.id = src.activity_id
-WHERE t.canonical_activity_id IS NULL
-  AND a.id IS NOT NULL;
-```
-
-if that is >0, optionallly run:
-
-```sql
-UPDATE TrainingLogData
-   SET canonical_activity_id = (
-     SELECT a.id
-     FROM activity_source src
-     JOIN activity a ON a.id = src.activity_id
-     WHERE src.source = 'strava'
-       AND src.source_activity_id = TrainingLogData.activityId
-   )
- WHERE canonical_activity_id IS NULL
-   AND EXISTS (
-     SELECT 1
-     FROM activity_source src
-     JOIN activity a ON a.id = src.activity_id
-     WHERE src.source = 'strava'
-       AND src.source_activity_id = TrainingLogData.activityId
-   );
-```
+LEFT JOIN activity_source s ON s.activity_id = a.id
+GROUP BY a.id;
