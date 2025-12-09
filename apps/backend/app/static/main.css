@@ -428,3 +428,40 @@ button:hover {
   height: 300px;
   margin-top: 20px;
 }
+
+.summary-container {
+  max-width: 700px;
+  margin: 1rem auto;
+}
+
+/* Fix spacing inside the table */
+.summary-table td,
+.summary-table th {
+  padding: 0.4rem 0.8rem;
+}
+
+/* Category column width + truncation */
+.summary-table .col-name {
+  max-width: 30rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Distance and time columns */
+.summary-table .col-distance,
+.summary-table .col-time {
+  width: 8rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Remove the double top border on this specific table */
+.summary-table {
+  border-top: none !important;
+}
+
+.summary-table .summary-row-border-header,
+.summary-table thead tr.summary-row-border-header th {
+  border-top: none !important;
+}
