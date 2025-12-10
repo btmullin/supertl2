@@ -459,9 +459,64 @@ button:hover {
 /* Remove the double top border on this specific table */
 .summary-table {
   border-top: none !important;
+  font-size: 18px;  /* match .styled-table font-size */
 }
 
 .summary-table .summary-row-border-header,
 .summary-table thead tr.summary-row-border-header th {
   border-top: none !important;
+}
+
+/* Dashboard layout: main table + side summary */
+.dashboard-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.dashboard-main {
+  flex: 2;
+  min-width: 0;
+}
+
+.dashboard-side {
+  flex: 1;
+  min-width: 260px;
+}
+
+/* Weekly summary tables on the dashboard side panel */
+.week-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  background-color: #ffffff;
+  border-radius: var(--theme-corner-radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* no explicit font-size so it inherits the same as the main dashboard */
+}
+
+.week-summary-table thead {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color);
+}
+
+.week-summary-table th,
+.week-summary-table td {
+  padding: 0.35rem 0.6rem;
+}
+
+.week-summary-table tbody tr:nth-child(even) {
+  background-color: #f7fafc;
+}
+
+/* Make the chart fill the side panel nicely */
+.weekly-chart-container {
+  width: 100%;
+  height: 400px;
+}
+
+.weekly-chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
 }

@@ -28,10 +28,11 @@ from app.services.analytics import (
     bucket_daily,
     summarize_by,
     group_by_category_id,
+    group_by_sport,
     get_start_datetime,
     get_local_date_for_activity,
     get_primary_training_log,
-) 
+)
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
@@ -69,6 +70,88 @@ def allowed_file(filename):
         in current_app.config["ALLOWED_EXTENSIONS"]
     )
 
+def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_after: int = 5):
+    """
+    Build a time series of weekly total training time (hours) around a given week.
+
+    - center_week_start: date (typically a Monday) of the "current" week.
+    - weeks_before / weeks_after: number of weeks to show on each side.
+
+    Returns:
+      {
+        "weeks": [
+          {"week_start": "2025-11-03", "label": "Nov 03", "total_hours": 5.5},
+          ...
+        ],
+        "current_index": 5,  # index in weeks[] of center_week_start
+      }
+    """
+    if isinstance(center_week_start, datetime):
+        center_week_start = center_week_start.date()
+
+    # Normalize to Monday just in case
+    center_week_start = center_week_start - timedelta(days=center_week_start.weekday())
+
+    window_start = center_week_start - timedelta(weeks=weeks_before)
+    # include the full last week (Mon..Sun) on the right
+    window_end = center_week_start + timedelta(weeks=weeks_after, days=6)
+
+    # Fetch training activities in the window (canonical Activity + TrainingLogData.isTraining)
+    activities = (
+        sqla_db.session.query(Activity)
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
+        .filter(
+            TrainingLogData.isTraining == 1,
+            func.date(Activity.start_time_utc).between(window_start, window_end),
+        )
+        .order_by(Activity.start_time_utc)
+        .all()
+    )
+
+    # Initialize all week slots with zero seconds
+    per_week_seconds = {}
+    for offset in range(-weeks_before, weeks_after + 1):
+        ws = center_week_start + timedelta(weeks=offset)
+        per_week_seconds[ws] = 0
+
+    # Bucket activities by LOCAL week (using analytics helper)
+    for a in activities:
+        local_date = get_local_date_for_activity(a)
+        if local_date is None:
+            continue
+
+        week_start = local_date - timedelta(days=local_date.weekday())
+        if week_start not in per_week_seconds:
+            # outside our 11-week window
+            continue
+
+        moving_s = getattr(a, "moving_time_s", None)
+        if moving_s is None:
+            moving_s = getattr(a, "elapsed_time_s", 0) or 0
+
+        per_week_seconds[week_start] += moving_s
+
+    # Build ordered list for the chart
+    sorted_weeks = sorted(per_week_seconds.keys())
+    weeks = []
+    for ws in sorted_weeks:
+        total_hours = per_week_seconds[ws] / 3600.0
+        weeks.append(
+            {
+                "week_start": ws.isoformat(),
+                "label": ws.strftime("%b %d"),
+                "total_hours": total_hours,
+            }
+        )
+
+    current_index = (
+        sorted_weeks.index(center_week_start)
+        if center_week_start in sorted_weeks
+        else 0
+    )
+
+    return {"weeks": weeks, "current_index": current_index}
+
 def get_dashboard_context(week_offset=0):
     today = datetime.today().date()
     start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
@@ -102,6 +185,13 @@ def get_dashboard_context(week_offset=0):
     }
     week_summary = summarize_activities(activities)
 
+    # Per-category (training-log hierarchy) summaries for this week
+    # Key is categoryId; we’ll turn that into a full path in the template.
+    category_summaries = summarize_by(
+        activities,
+        key=group_by_category_id,
+    )
+
     # Get previous week summaries
     previous_week_start = start_of_week - timedelta(weeks=1)
     previous_week_end = end_of_week - timedelta(weeks=1)
@@ -118,6 +208,9 @@ def get_dashboard_context(week_offset=0):
 
     previous_week_summary = summarize_activities(previous_activities)
 
+    # Weekly time series for the bar chart (about 11 weeks centered on this one)
+    weekly_series = build_weekly_time_series(start_of_week, weeks_before=5, weeks_after=5)
+
     return {
         "start_of_week": start_of_week,
         "end_of_week": end_of_week,
@@ -125,6 +218,8 @@ def get_dashboard_context(week_offset=0):
         "daily_summaries": daily_summaries,
         "week_summary": week_summary,
         "previous_week_summary": previous_week_summary,
+        "category_summaries": category_summaries,
+        "weekly_series": weekly_series,
         "days": days,
         "week_offset": week_offset,
     }
