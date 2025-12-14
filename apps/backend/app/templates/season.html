@@ -3,14 +3,13 @@
 
 <div class="whole-body">
     <div class="section">
-    <h1>Seasons</h1>
 
     {% if not seasons or seasons|length == 0 %}
         <p>No seasons defined yet. Create one in <a href="{{ url_for('views.admin_seasons') }}">Admin: Seasons</a>.</p>
     {% else %}
 
         <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
-        <label for="season_id" style="margin-right:.5rem;">Season</label>
+        <label for="season_id">Season</label>
         <select id="season_id" name="season_id" onchange="this.form.submit()">
             {% for s in seasons %}
             <option value="{{ s.id }}" {% if selected_season and s.id == selected_season.id %}selected{% endif %}>
@@ -22,7 +21,7 @@
         </form>
 
         {% if selected_season %}
-        <h2 style="margin-top:0.5rem;">{{ selected_season.name }}</h2>
+        <label>{{ selected_season.name }}</label>
         <p style="opacity:0.85; margin-top:0.25rem;">
             {{ selected_season.start_date.strftime('%B %d, %Y') }}
             &ndash;
@@ -44,34 +43,12 @@
 
         {% if weekly and weekly.weeks and weekly.weeks|length %}
         <div class="season-chart-container" style="margin-top: 1.5rem;">
-        <h3 style="margin-bottom: .5rem;">Weekly training volume</h3>
+        <label>Weekly training volume</label>
 
         <div style="height: 260px;">
             <canvas id="seasonWeeklyChart" style="width:100%; height:100%;"></canvas>
         </div>
         </div>
-        {% endif %}
-
-        {% if weekly and weekly.weeks and weekly.weeks|length %}
-            <div class="summary-container" style="margin-top: 1.5rem;">
-            <h3 style="margin-bottom: .5rem;">Weekly volume (total)</h3>
-            <table class="styled-table">
-                <thead>
-                <tr>
-                    <th>Week start</th>
-                    <th style="text-align:right;">Hours</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for w in weekly.weeks %}
-                    <tr>
-                    <td>{{ w.week_start }}</td>
-                    <td style="text-align:right;">{{ "%.1f"|format(w.hours) }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
         {% endif %}
 
         {% else %}
