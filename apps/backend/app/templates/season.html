@@ -38,6 +38,9 @@
                 <tr><th>Avg hours / week</th><td style="text-align:right;">{{ "%.1f"|format(summary.avg_hours_per_week) }}</td></tr>
                 </tbody>
             </table>
+            {% if summary and summary.is_in_progress %}
+              <p style="opacity:0.8;">To date through {{ summary.effective_end }}</p>
+            {% endif %}
             </div>
         {% endif %}
 

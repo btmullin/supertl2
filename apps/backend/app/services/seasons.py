@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 from typing import Optional, List, Dict, Any
 
 from sqlalchemy import func
@@ -43,6 +44,10 @@ def _coerce_to_datetime(ts):
                 return None
     return None
 
+def _today_local_date() -> date:
+    # Your timezone per project instructions
+    return datetime.now(ZoneInfo("America/Chicago")).date()
+
 def _as_datetime_start(d: date) -> datetime:
     return datetime(d.year, d.month, d.day, 0, 0, 0)
 
@@ -50,6 +55,16 @@ def _as_datetime_end_exclusive(d: date) -> datetime:
     # end is inclusive at the season level, but easier to query as < next day
     nd = d + timedelta(days=1)
     return datetime(nd.year, nd.month, nd.day, 0, 0, 0)
+
+def _daterange_weeks(start: date, end: date, week_start: int = 0):
+    ws = _week_start(start, week_start)
+    we = _week_start(end, week_start)
+    out = []
+    cur = ws
+    while cur <= we:
+        out.append(cur)
+        cur = cur + timedelta(days=7)
+    return out
 
 def _week_start(dt: date, week_start: int = 0) -> date:
     """
@@ -76,12 +91,18 @@ def _daterange_weeks(start: date, end: date, week_start: int = 0) -> List[date]:
 
 def get_season_summary(season_start: date, season_end: date, use_local: bool = True) -> Dict[str, Any]:
     """
+    For in-progress seasons, weeks + avg/week are computed TO-DATE (through today),
+    not through the configured season_end.
+
     Returns:
       total_hours: float
       sessions: int
       weeks: int (count of week buckets touched)
       avg_hours_per_week: float
     """
+    today = _today_local_date()
+    effective_end = min(season_end, today)
+    is_in_progress = effective_end < season_end
     start_dt = _as_datetime_start(season_start)
     end_dt_excl = _as_datetime_end_exclusive(season_end)
 
@@ -102,7 +123,7 @@ def get_season_summary(season_start: date, season_end: date, use_local: bool = T
     total_seconds = int(total_seconds or 0)
     sessions = int(sessions or 0)
 
-    week_starts = _daterange_weeks(season_start, season_end, week_start=0)  # Monday start
+    week_starts = _daterange_weeks(season_start, effective_end, week_start=0)  # Monday start
     weeks = len(week_starts)
     total_hours = total_seconds / 3600.0
     avg_hours_per_week = (total_hours / weeks) if weeks else 0.0
@@ -112,6 +133,8 @@ def get_season_summary(season_start: date, season_end: date, use_local: bool = T
         "sessions": sessions,
         "weeks": weeks,
         "avg_hours_per_week": avg_hours_per_week,
+        "effective_end": effective_end.isoformat(),
+        "is_in_progress": is_in_progress,
     }
 
 
