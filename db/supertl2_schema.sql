@@ -274,3 +274,17 @@ LEFT JOIN st     ON st.activity_id     = a.id
 /* v_activity_best(activity_id,canonical_start_utc,display_start_local,
                    display_distance_m,display_elapsed_s,display_name,
                    display_sport,has_strava,has_sporttracks) */;
+
+CREATE TABLE IF NOT EXISTS Season (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (end_date >= start_date)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ix_season_name ON Season(name);
+CREATE INDEX IF NOT EXISTS ix_season_start_end ON Season(start_date, end_date);

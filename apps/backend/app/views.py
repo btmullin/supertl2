@@ -37,7 +37,8 @@ from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .forms.ActivityQueryForm import ActivityQueryFilterForm
-from .models import StravaActivity, WorkoutType, TrainingLogData, Category, Activity, SportTracksActivity
+from .forms.season_forms import SeasonCreateForm
+from .models import StravaActivity, WorkoutType, TrainingLogData, Category, Activity, SportTracksActivity, Season
 from .db.base import sqla_db
 from .filters import category_path_filter
 
@@ -499,6 +500,46 @@ def import_strava():
 
     flash(f"Imported new activities.")
     return redirect(url_for("views.activitylist"))
+
+@views.route("/admin/seasons", methods=["GET", "POST"])
+def admin_seasons():
+    form = SeasonCreateForm()
+
+    if form.validate_on_submit():
+        season = Season(
+            name=form.name.data.strip(),
+            start_date=form.start_date.data,
+            end_date=form.end_date.data,
+            is_active=bool(form.is_active.data),
+        )
+        sqla_db.session.add(season)
+        sqla_db.session.commit()
+        flash("Season created.", "success")
+        return redirect(url_for("views.admin_seasons"))
+
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
+    return render_template("admin_seasons.html", form=form, seasons=seasons)
+
+def _get_default_season_id():
+    s = (Season.query
+         .filter(Season.is_active == True)
+         .order_by(Season.start_date.desc())
+         .first())
+    return s.id if s else None
+
+@views.route("/seasons")
+def season_view():
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
+
+    season_id = request.args.get("season_id", type=int) or _get_default_season_id()
+    selected = Season.query.get(season_id) if season_id else None
+
+    return render_template(
+        "season.html",
+        seasons=seasons,
+        selected_season=selected,
+        season_id=season_id,
+    )
 
 @views.route("/activitylist")
 def activitylist():

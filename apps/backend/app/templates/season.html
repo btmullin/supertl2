@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="section">
+  <h1>Seasons</h1>
+
+  {% if not seasons or seasons|length == 0 %}
+    <p>No seasons defined yet. Create one in <a href="{{ url_for('views.admin_seasons') }}">Admin: Seasons</a>.</p>
+  {% else %}
+
+    <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
+      <label for="season_id" style="margin-right:.5rem;">Season</label>
+      <select id="season_id" name="season_id" onchange="this.form.submit()">
+        {% for s in seasons %}
+          <option value="{{ s.id }}" {% if selected_season and s.id == selected_season.id %}selected{% endif %}>
+            {{ s.label if s.label is defined else s.name }}
+          </option>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit" class="btn">Go</button></noscript>
+    </form>
+
+    {% if selected_season %}
+      <h2 style="margin-top:0.5rem;">{{ selected_season.name }}</h2>
+      <p style="opacity:0.85; margin-top:0.25rem;">
+        {{ selected_season.start_date.strftime('%B %d, %Y') }}
+        &ndash;
+        {{ selected_season.end_date.strftime('%B %d, %Y') }}
+      </p>
+
+      <!-- Step 5 will start filling in summary + charts -->
+      <div class="card" style="margin-top: 1rem;">
+        <p style="margin:0;">(Next) Season summary + weekly chart goes here.</p>
+      </div>
+    {% else %}
+      <p>No active season found. Pick one from the list (or mark one active in Admin).</p>
+    {% endif %}
+
+  {% endif %}
+</div>
+
+{% endblock %}
