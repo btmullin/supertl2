@@ -33,6 +33,7 @@ from app.services.analytics import (
     get_local_date_for_activity,
     get_primary_training_log,
 )
+from app.services.seasons import get_season_summary, get_season_weekly_series
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
@@ -534,11 +535,19 @@ def season_view():
     season_id = request.args.get("season_id", type=int) or _get_default_season_id()
     selected = Season.query.get(season_id) if season_id else None
 
+    summary = None
+    weekly = None
+    if selected:
+        summary = get_season_summary(selected.start_date, selected.end_date, use_local=True)
+        weekly = get_season_weekly_series(selected.start_date, selected.end_date, use_local=True)
+
     return render_template(
         "season.html",
         seasons=seasons,
         selected_season=selected,
         season_id=season_id,
+        summary=summary,
+        weekly=weekly,
     )
 
 @views.route("/activitylist")

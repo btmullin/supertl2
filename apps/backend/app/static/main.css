@@ -520,3 +520,9 @@ button:hover {
   width: 100% !important;
   height: 100% !important;
 }
+
+.season-chart-container {
+  width: 100%;
+  max-width: none;   /* overrides any inherited max-width behavior */
+  margin: 1rem 0;    /* not centered/narrow */
+}

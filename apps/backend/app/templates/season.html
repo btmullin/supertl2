@@ -1,42 +1,152 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="section">
-  <h1>Seasons</h1>
+<div class="whole-body">
+    <div class="section">
+    <h1>Seasons</h1>
 
-  {% if not seasons or seasons|length == 0 %}
-    <p>No seasons defined yet. Create one in <a href="{{ url_for('views.admin_seasons') }}">Admin: Seasons</a>.</p>
-  {% else %}
-
-    <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
-      <label for="season_id" style="margin-right:.5rem;">Season</label>
-      <select id="season_id" name="season_id" onchange="this.form.submit()">
-        {% for s in seasons %}
-          <option value="{{ s.id }}" {% if selected_season and s.id == selected_season.id %}selected{% endif %}>
-            {{ s.label if s.label is defined else s.name }}
-          </option>
-        {% endfor %}
-      </select>
-      <noscript><button type="submit" class="btn">Go</button></noscript>
-    </form>
-
-    {% if selected_season %}
-      <h2 style="margin-top:0.5rem;">{{ selected_season.name }}</h2>
-      <p style="opacity:0.85; margin-top:0.25rem;">
-        {{ selected_season.start_date.strftime('%B %d, %Y') }}
-        &ndash;
-        {{ selected_season.end_date.strftime('%B %d, %Y') }}
-      </p>
-
-      <!-- Step 5 will start filling in summary + charts -->
-      <div class="card" style="margin-top: 1rem;">
-        <p style="margin:0;">(Next) Season summary + weekly chart goes here.</p>
-      </div>
+    {% if not seasons or seasons|length == 0 %}
+        <p>No seasons defined yet. Create one in <a href="{{ url_for('views.admin_seasons') }}">Admin: Seasons</a>.</p>
     {% else %}
-      <p>No active season found. Pick one from the list (or mark one active in Admin).</p>
-    {% endif %}
 
-  {% endif %}
+        <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
+        <label for="season_id" style="margin-right:.5rem;">Season</label>
+        <select id="season_id" name="season_id" onchange="this.form.submit()">
+            {% for s in seasons %}
+            <option value="{{ s.id }}" {% if selected_season and s.id == selected_season.id %}selected{% endif %}>
+                {{ s.label if s.label is defined else s.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn">Go</button></noscript>
+        </form>
+
+        {% if selected_season %}
+        <h2 style="margin-top:0.5rem;">{{ selected_season.name }}</h2>
+        <p style="opacity:0.85; margin-top:0.25rem;">
+            {{ selected_season.start_date.strftime('%B %d, %Y') }}
+            &ndash;
+            {{ selected_season.end_date.strftime('%B %d, %Y') }}
+        </p>
+
+        {% if summary %}
+            <div class="summary-container" style="margin-top: 1rem;">
+            <table class="styled-table">
+                <tbody>
+                <tr><th>Total hours</th><td style="text-align:right;">{{ "%.1f"|format(summary.total_hours) }}</td></tr>
+                <tr><th>Sessions</th><td style="text-align:right;">{{ summary.sessions }}</td></tr>
+                <tr><th>Weeks</th><td style="text-align:right;">{{ summary.weeks }}</td></tr>
+                <tr><th>Avg hours / week</th><td style="text-align:right;">{{ "%.1f"|format(summary.avg_hours_per_week) }}</td></tr>
+                </tbody>
+            </table>
+            </div>
+        {% endif %}
+
+        {% if weekly and weekly.weeks and weekly.weeks|length %}
+        <div class="season-chart-container" style="margin-top: 1.5rem;">
+        <h3 style="margin-bottom: .5rem;">Weekly training volume</h3>
+
+        <div style="height: 260px;">
+            <canvas id="seasonWeeklyChart" style="width:100%; height:100%;"></canvas>
+        </div>
+        </div>
+        {% endif %}
+
+        {% if weekly and weekly.weeks and weekly.weeks|length %}
+            <div class="summary-container" style="margin-top: 1.5rem;">
+            <h3 style="margin-bottom: .5rem;">Weekly volume (total)</h3>
+            <table class="styled-table">
+                <thead>
+                <tr>
+                    <th>Week start</th>
+                    <th style="text-align:right;">Hours</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for w in weekly.weeks %}
+                    <tr>
+                    <td>{{ w.week_start }}</td>
+                    <td style="text-align:right;">{{ "%.1f"|format(w.hours) }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        {% endif %}
+
+        {% else %}
+        <p>No active season found. Pick one from the list (or mark one active in Admin).</p>
+        {% endif %}
+
+    {% endif %}
+    </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if weekly and weekly.weeks and weekly.weeks|length %}
+<script>
+  (function () {
+    const weekly = {{ weekly | tojson }};
+    if (!weekly || !weekly.weeks || !weekly.weeks.length) {
+      return;
+    }
+
+    const labels = weekly.weeks.map(w => w.label);
+    const data = weekly.weeks.map(w => Number(w.hours) || 0);
+
+    const canvas = document.getElementById("seasonWeeklyChart");
+    if (!canvas) {
+      return;
+    }
+
+    // Prevent duplicate charts on reload / navigation
+    if (canvas._chartInstance) {
+      canvas._chartInstance.destroy();
+    }
+
+    const chart = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Hours",
+          data: data,
+          borderRadius: 6,
+          backgroundColor: "rgba(54, 162, 235, 0.85)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: {
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value) => value + " h"
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ctx.parsed.y.toFixed(1) + " hours"
+            }
+          }
+        }
+      }
+    });
+
+    canvas._chartInstance = chart;
+  })();
+</script>
+{% endif %}
+
 
 {% endblock %}
