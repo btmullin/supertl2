@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import Optional, List, Dict, Any
+from collections import defaultdict
 
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 # adjust imports to your project
 from ..db.base import sqla_db
@@ -203,46 +204,132 @@ def get_season_weekly_series(season_start: date, season_end: date, use_local: bo
 
     return {"weeks": weeks_out}
 
-def get_season_traininglog_category_breakdown(season_start_dt, season_end_dt_excl, use_local=True):
+def _build_category_full_paths() -> dict[int, str]:
     """
-    Breakdown of hours by TrainingLogData.categoryId (Category.name),
-    summed using Activity.moving_time_s.
+    Returns {category_id: "Root : Child : Leaf"} for ALL categories.
+    Mirrors the recursive CTE you already use in views.py.
+    """
+    rows = sqla_db.session.execute(text("""
+        WITH RECURSIVE category_path(id, name, parent_id, full_path, depth) AS (
+            SELECT id, name, parent_id, name, 0
+            FROM Category
+            WHERE parent_id IS NULL
+            UNION ALL
+            SELECT c.id, c.name, c.parent_id, cp.full_path || ' : ' || c.name, cp.depth + 1
+            FROM Category c
+            JOIN category_path cp ON c.parent_id = cp.id
+        )
+        SELECT id, full_path, depth FROM category_path
+    """)).fetchall()
 
-    Includes an 'Uncategorized' bucket for activities missing TrainingLogData
-    or missing categoryId.
+    full_path = {}
+    depth_map = {}
+    for r in rows:
+        full_path[int(r.id)] = r.full_path
+        depth_map[int(r.id)] = int(r.depth)
+    return full_path, depth_map
+
+
+def _build_category_parent_map() -> dict[int, int | None]:
+    rows = sqla_db.session.query(Category.id, Category.parent_id).all()
+    return {int(cid): (int(pid) if pid is not None else None) for cid, pid in rows}
+
+
+def _ancestor_at_depth(cat_id: int, target_depth: int, parent_map: dict[int, int | None], depth_map: dict[int, int]) -> int:
+    """
+    Walk up parents until reaching the node whose depth == target_depth.
+    If cat is shallower than target_depth, return the original.
+    """
+    cur = cat_id
+    while cur in depth_map and depth_map[cur] > target_depth:
+        cur = parent_map.get(cur)
+        if cur is None:
+            break
+    return cur if cur is not None else cat_id
+
+
+def get_season_traininglog_category_breakdown(
+    season_start_dt,
+    season_end_dt_excl,
+    use_local=True,
+    rollup_depth: int | None = 2,   # <-- set None to keep full leaf level
+    min_percent: float = 2.0        # <-- collapse tiny slices into "Other"
+):
+    """
+    Training-only category distribution using TrainingLogData.categoryId.
+
+    - Groups by categoryId (unique), NOT by Category.name.
+    - Uses full_path labels for disambiguation.
+    - Optionally rolls up deep categories to a chosen depth (default depth=2).
+    - Optionally collapses tiny slices into "Other".
     """
     ts_col = Activity.start_time_local if use_local and hasattr(Activity, "start_time_local") else Activity.start_time_utc
 
+    # 1) Sum seconds by *leaf* categoryId (unique key)
     rows = (
         sqla_db.session.query(
-            Category.name.label("label"),
+            TrainingLogData.categoryId.label("category_id"),
             func.coalesce(func.sum(Activity.moving_time_s), 0).label("seconds"),
         )
-        .join(
-            TrainingLogData,
-            TrainingLogData.canonical_activity_id == Activity.id,
-        )
-        .join(
-            Category,
-            Category.id == TrainingLogData.categoryId,
-        )
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
+            TrainingLogData.categoryId.isnot(None),
             ts_col >= season_start_dt,
             ts_col < season_end_dt_excl,
         )
-        .group_by(Category.name)
-        .order_by(func.sum(Activity.moving_time_s).desc())
+        .group_by(TrainingLogData.categoryId)
         .all()
     )
 
-    total_seconds = sum(int(r.seconds or 0) for r in rows) or 0
+    totals_by_leaf = {int(r.category_id): int(r.seconds or 0) for r in rows}
+    total_seconds = sum(totals_by_leaf.values()) or 0
 
+    # 2) Build category display paths + parents/depths
+    full_paths, depth_map = _build_category_full_paths()
+    parent_map = _build_category_parent_map()
+
+    # 3) Optional rollup
+    totals_by_bucket: dict[int, int] = defaultdict(int)
+    for leaf_id, sec in totals_by_leaf.items():
+        if rollup_depth is None:
+            bucket_id = leaf_id
+        else:
+            bucket_id = _ancestor_at_depth(leaf_id, rollup_depth, parent_map, depth_map)
+        totals_by_bucket[bucket_id] += sec
+
+    # 4) Build items and optionally collapse small slices into "Other"
     items = []
-    for r in rows:
-        sec = int(r.seconds or 0)
+    for cid, sec in totals_by_bucket.items():
+        label = full_paths.get(cid) or f"Category {cid}"
+        items.append({"category_id": cid, "label": label, "seconds": sec})
+
+    items.sort(key=lambda x: x["seconds"], reverse=True)
+
+    if min_percent and total_seconds:
+        keep = []
+        other_seconds = 0
+        for it in items:
+            pct = (it["seconds"] / total_seconds) * 100.0
+            if pct < min_percent:
+                other_seconds += it["seconds"]
+            else:
+                keep.append(it)
+        if other_seconds > 0:
+            keep.append({"category_id": -1, "label": "Other", "seconds": other_seconds})
+        items = keep
+
+    # 5) Final shape for template/chart
+    out = []
+    for it in items:
+        sec = int(it["seconds"])
         hours = sec / 3600.0
         pct = (sec / total_seconds * 100.0) if total_seconds else 0.0
-        items.append({"label": r.label, "hours": hours, "percent": pct})
+        out.append({
+            "category_id": it["category_id"],
+            "label": it["label"],
+            "hours": hours,
+            "percent": pct,
+        })
 
-    return {"total_hours": total_seconds / 3600.0, "items": items}
+    return {"total_hours": total_seconds / 3600.0, "items": out}

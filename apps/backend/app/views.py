@@ -551,7 +551,7 @@ def season_view():
 
         start_dt = _as_datetime_start(selected.start_date)
         end_dt_excl = _as_datetime_end_exclusive(selected.end_date)
-        breakdown = get_season_traininglog_category_breakdown(start_dt, end_dt_excl, use_local=True)
+        breakdown = get_season_traininglog_category_breakdown(start_dt, end_dt_excl, use_local=True, rollup_depth=0, min_percent=2.0)
 
     return render_template(
         "season.html",
