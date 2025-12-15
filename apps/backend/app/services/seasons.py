@@ -10,6 +10,8 @@ from sqlalchemy import func
 # adjust imports to your project
 from ..db.base import sqla_db
 from ..models.activity import Activity
+from ..models.traininglogdata import TrainingLogData
+from ..models.category import Category
 
 
 from datetime import datetime
@@ -115,8 +117,15 @@ def get_season_summary(season_start: date, season_end: date, use_local: bool = T
             func.coalesce(func.sum(Activity.moving_time_s), 0),
             func.count(Activity.id),
         )
-        .filter(ts_col >= start_dt)
-        .filter(ts_col < end_dt_excl)
+        .join(
+            TrainingLogData,
+            TrainingLogData.canonical_activity_id == Activity.id,
+        )
+        .filter(
+            TrainingLogData.isTraining == 1,
+            ts_col >= start_dt,
+            ts_col < end_dt_excl,
+        )
         .one()
     )
 
@@ -160,8 +169,15 @@ def get_season_weekly_series(season_start: date, season_end: date, use_local: bo
     # This avoids SQLite timezone/date quirks and keeps “week starts Monday” consistent.
     rows = (
         sqla_db.session.query(ts_col, Activity.moving_time_s)
-        .filter(ts_col >= start_dt)
-        .filter(ts_col < end_dt_excl)
+        .join(
+            TrainingLogData,
+            TrainingLogData.canonical_activity_id == Activity.id,
+        )
+        .filter(
+            TrainingLogData.isTraining == 1,
+            ts_col >= start_dt,
+            ts_col < end_dt_excl,
+        )
         .all()
     )
 
@@ -186,3 +202,47 @@ def get_season_weekly_series(season_start: date, season_end: date, use_local: bo
         })
 
     return {"weeks": weeks_out}
+
+def get_season_traininglog_category_breakdown(season_start_dt, season_end_dt_excl, use_local=True):
+    """
+    Breakdown of hours by TrainingLogData.categoryId (Category.name),
+    summed using Activity.moving_time_s.
+
+    Includes an 'Uncategorized' bucket for activities missing TrainingLogData
+    or missing categoryId.
+    """
+    ts_col = Activity.start_time_local if use_local and hasattr(Activity, "start_time_local") else Activity.start_time_utc
+
+    rows = (
+        sqla_db.session.query(
+            Category.name.label("label"),
+            func.coalesce(func.sum(Activity.moving_time_s), 0).label("seconds"),
+        )
+        .join(
+            TrainingLogData,
+            TrainingLogData.canonical_activity_id == Activity.id,
+        )
+        .join(
+            Category,
+            Category.id == TrainingLogData.categoryId,
+        )
+        .filter(
+            TrainingLogData.isTraining == 1,
+            ts_col >= season_start_dt,
+            ts_col < season_end_dt_excl,
+        )
+        .group_by(Category.name)
+        .order_by(func.sum(Activity.moving_time_s).desc())
+        .all()
+    )
+
+    total_seconds = sum(int(r.seconds or 0) for r in rows) or 0
+
+    items = []
+    for r in rows:
+        sec = int(r.seconds or 0)
+        hours = sec / 3600.0
+        pct = (sec / total_seconds * 100.0) if total_seconds else 0.0
+        items.append({"label": r.label, "hours": hours, "percent": pct})
+
+    return {"total_hours": total_seconds / 3600.0, "items": items}

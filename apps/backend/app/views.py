@@ -33,7 +33,7 @@ from app.services.analytics import (
     get_local_date_for_activity,
     get_primary_training_log,
 )
-from app.services.seasons import get_season_summary, get_season_weekly_series
+from app.services.seasons import get_season_summary, get_season_weekly_series, get_season_traininglog_category_breakdown
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
@@ -528,6 +528,14 @@ def _get_default_season_id():
          .first())
     return s.id if s else None
 
+
+def _as_datetime_start(d):
+    return datetime(d.year, d.month, d.day, 0, 0, 0)
+
+def _as_datetime_end_exclusive(d):
+    nd = d + timedelta(days=1)
+    return datetime(nd.year, nd.month, nd.day, 0, 0, 0)
+
 @views.route("/seasons")
 def season_view():
     seasons = Season.query.order_by(Season.start_date.desc()).all()
@@ -541,6 +549,10 @@ def season_view():
         summary = get_season_summary(selected.start_date, selected.end_date, use_local=True)
         weekly = get_season_weekly_series(selected.start_date, selected.end_date, use_local=True)
 
+        start_dt = _as_datetime_start(selected.start_date)
+        end_dt_excl = _as_datetime_end_exclusive(selected.end_date)
+        breakdown = get_season_traininglog_category_breakdown(start_dt, end_dt_excl, use_local=True)
+
     return render_template(
         "season.html",
         seasons=seasons,
@@ -548,6 +560,7 @@ def season_view():
         season_id=season_id,
         summary=summary,
         weekly=weekly,
+        breakdown=breakdown,
     )
 
 @views.route("/activitylist")

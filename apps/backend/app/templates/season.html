@@ -44,6 +44,42 @@
             </div>
         {% endif %}
 
+        {% set items = breakdown.get("items") if breakdown else None %}
+        {% if items and items|length %}
+          <div class="season-chart-container">
+            <label>Activity type distribution</label>
+
+            <div style="display:flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;">
+              <!-- Donut -->
+              <div style="width: 360px; height: 500px;">
+                <canvas id="seasonDonutChart" style="width:100%; height:100%;"></canvas>
+              </div>
+
+              <!-- Table -->
+              <div class="summary-container" style="margin: 0;">
+                <table class="styled-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th style="text-align:right;">Hours</th>
+                      <th style="text-align:right;">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for it in items %}
+                      <tr>
+                        <td>{{ it["label"] }}</td>
+                        <td style="text-align:right;">{{ "%.1f"|format(it["hours"]) }}</td>
+                        <td style="text-align:right;">{{ "%.0f"|format(it["percent"]) }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
         {% if weekly and weekly.weeks and weekly.weeks|length %}
         <div class="season-chart-container" style="margin-top: 1.5rem;">
         <label>Weekly training volume</label>
@@ -128,5 +164,54 @@
 </script>
 {% endif %}
 
+
+{% if items and items|length %}
+<script>
+  (function () {
+    const breakdown = {{ breakdown | tojson }};
+    const items = (breakdown && breakdown["items"]) ? breakdown["items"] : [];
+    if (!items.length) return;
+
+    const labels = items.map(x => x["label"]);
+    const data = items.map(x => Number(x["hours"]) || 0);
+
+    const canvas = document.getElementById("seasonDonutChart");
+    if (!canvas) return;
+
+    if (canvas._chartInstance) {
+      canvas._chartInstance.destroy();
+    }
+
+    canvas._chartInstance = new Chart(canvas.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                const v = ctx.parsed ?? 0;
+                const total = data.reduce((a, b) => a + b, 0) || 1;
+                const pct = (v / total) * 100;
+                return `${ctx.label}: ${v.toFixed(1)} h (${pct.toFixed(0)}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endif %}
 
 {% endblock %}
