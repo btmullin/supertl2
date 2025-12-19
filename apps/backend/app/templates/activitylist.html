@@ -1,6 +1,16 @@
 {% extends 'base.html' %} {% block content %}
 <div class="whole-body">
   <div class="section">
+    <form method="get" style="margin-bottom: 0.75rem;">
+      <label class="filter-checkbox">
+        <input type="checkbox"
+              name="missing_training_log"
+              value="1"
+              {% if missing_training_log %}checked{% endif %}>
+        <span>Only show activities missing a training log</span>
+      </label>
+      <input type="submit" value="Apply" style="margin-left: 0.6rem;">
+    </form>
     <table class="styled-table">
       <thead>
         <tr>
@@ -56,15 +66,14 @@
     </table>
     <div class="pagination">
       {% if page > 1 %}
-        <a href="{{ url_for('views.activitylist', page=page-1) }}">Previous</a>
+        <a href="{{ url_for('views.activitylist', page=page-1, missing_training_log=('1' if missing_training_log else '0')) }}">Previous</a>
       {% endif %}
 
       <span>Page {{ page }} of {{ total_pages }}</span>
 
       {% if page < total_pages %}
-        <a href="{{ url_for('views.activitylist', page=page+1) }}">Next</a>
+        <a href="{{ url_for('views.activitylist', page=page+1, missing_training_log=('1' if missing_training_log else '0')) }}">Next</a>
       {% endif %}
     </div>
-  </div>
 </div>
 {% endblock %}

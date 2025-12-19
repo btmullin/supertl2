@@ -502,14 +502,27 @@ def import_strava():
 
 @views.route("/activitylist")
 def activitylist():
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("page", 1, type=int)
+    only_missing = request.args.get("missing_training_log", "0") == "1"
+
     offset = (page - 1) * PER_PAGE
-    # Fetch activities in date range
-    rows = get_canonical_activities(limit=PER_PAGE, offset=offset)
-    total = get_canonical_activity_count()
+
+    rows = get_canonical_activities(
+        limit=PER_PAGE,
+        offset=offset,
+        only_missing_training_log=only_missing,
+    )
+
+    total = get_canonical_activity_count(only_missing_training_log=only_missing)
     total_pages = (total + PER_PAGE - 1) // PER_PAGE if total > 0 else 1
 
-    return render_template("activitylist.html", activities=rows, page=page, total_pages=total_pages)
+    return render_template(
+        "activitylist.html",
+        activities=rows,
+        page=page,
+        total_pages=total_pages,
+        missing_training_log=only_missing,
+    )
 
 @views.route("/query", methods=["GET"])
 def activity_query():

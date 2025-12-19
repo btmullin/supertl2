@@ -520,3 +520,41 @@ button:hover {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* Activity list filter bar */
+.activity-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Checkbox pill styled to match buttons */
+.filter-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  background-color: var(--theme-color-accent);
+  color: var(--theme-font-color);
+
+  padding: 8px 16px;
+  border-radius: var(--theme-corner-radius);
+
+  font-size: medium;
+  font-weight: bold;
+
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Checkbox alignment + sizing */
+.filter-checkbox input[type="checkbox"] {
+  margin: 0;
+  transform: scale(1.1);
+  vertical-align: middle;
+}
+
+/* Keep text visually centered */
+.filter-checkbox span {
+  line-height: 1;
+}
