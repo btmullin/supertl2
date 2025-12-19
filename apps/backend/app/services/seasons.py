@@ -333,3 +333,41 @@ def get_season_traininglog_category_breakdown(
         })
 
     return {"total_hours": total_seconds / 3600.0, "items": out}
+
+def get_season_comparison_rows(seasons) -> List[Dict[str, Any]]:
+    """
+    Returns rows suitable for a comparison table.
+    Uses the same definition of "training" as the dashboard:
+    TrainingLogData.isTraining == 1. :contentReference[oaicite:3]{index=3}
+    """
+    rows = []
+    for s in seasons:
+        summary = get_season_summary(s.start_date, s.end_date, use_local=True)
+
+        # (Optional) add one “headline category” at a rolled-up depth:
+        # If you don’t want this yet, delete this block.
+        start_dt = _as_datetime_start(s.start_date)
+        end_dt_excl = _as_datetime_end_exclusive(s.end_date)
+        breakdown = get_season_traininglog_category_breakdown(
+            start_dt, end_dt_excl, use_local=True, rollup_depth=1, min_percent=0.0
+        )
+        top_cat = None
+        if breakdown and breakdown.get("items"):
+            top_cat = breakdown["items"][0]["label"]
+
+        rows.append({
+            "id": s.id,
+            "name": s.name,
+            "start_date": s.start_date,
+            "end_date": s.end_date,
+            "is_active": bool(getattr(s, "is_active", False)),
+            "is_in_progress": bool(summary.get("is_in_progress")),
+            "total_hours": float(summary.get("total_hours", 0.0)),
+            "sessions": int(summary.get("sessions", 0)),
+            "weeks": int(summary.get("weeks", 0)),
+            "avg_hours_per_week": float(summary.get("avg_hours_per_week", 0.0)),
+            "effective_end": summary.get("effective_end"),
+            "top_category": top_cat,
+        })
+
+    return rows

@@ -90,6 +90,45 @@
         </div>
         {% endif %}
 
+        {% if compare_rows and compare_rows|length %}
+          <div class="section">
+            <label>Season comparison</label>
+
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Season</th>
+                  <th>Dates</th>
+                  <th style="text-align:right;">Hours</th>
+                  <th style="text-align:right;">Sessions</th>
+                  <th style="text-align:right;">Weeks</th>
+                  <th style="text-align:right;">Avg/wk</th>
+                  <th>Top category</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in compare_rows %}
+                  {% set is_sel = (selected_season and r.id == selected_season.id) %}
+                  <tr {% if is_sel %}style="outline: 2px solid var(--theme-color-primary);"{% endif %}>
+                    <td>
+                      <a href="{{ url_for('views.season_view', season_id=r.id) }}">{{ r.name }}</a>
+                      {% if r.is_in_progress %}
+                        <span style="font-size:0.9em; opacity:0.75;">(to date)</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ r.start_date }} → {{ r.end_date }}</td>
+                    <td style="text-align:right;">{{ "%.1f"|format(r.total_hours) }}</td>
+                    <td style="text-align:right;">{{ r.sessions }}</td>
+                    <td style="text-align:right;">{{ r.weeks }}</td>
+                    <td style="text-align:right;">{{ "%.1f"|format(r.avg_hours_per_week) }}</td>
+                    <td>{{ r.top_category or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
         {% else %}
         <p>No active season found. Pick one from the list (or mark one active in Admin).</p>
         {% endif %}
