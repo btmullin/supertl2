@@ -113,36 +113,43 @@ def import_strava_data():
 
     supertl_db.commit()
 
-def get_canonical_activities(limit=100, offset=0):
-    """
-    Return canonical Activity ORM objects with optional TrainingLogData joined.
-    Each row is a tuple: (Activity, TrainingLogData or None)
-    """
+def get_canonical_activities(
+    limit: int,
+    offset: int,
+    only_missing_training_log: bool = False,
+):
     q = (
         sqla_db.session.query(Activity, TrainingLogData)
         .outerjoin(
             TrainingLogData,
-            TrainingLogData.canonical_activity_id == Activity.id,
+            TrainingLogData.canonical_activity_id == Activity.id
         )
-        .options(
-            joinedload(Activity.sources)  # pre-load Activity.sources to avoid N+1
-        )
-        .order_by(Activity.start_time_utc.desc())
-        .limit(limit)
-        .offset(offset)
+    )
+
+    # Apply filters BEFORE limit/offset
+    if only_missing_training_log:
+        q = q.filter(TrainingLogData.canonical_activity_id.is_(None))
+
+    # Then ordering + pagination
+    q = (
+        q.order_by(Activity.start_time_utc.desc())
+         .limit(limit)
+         .offset(offset)
     )
 
     return q.all()
 
 
-def get_canonical_activity_count():
-    """
-    Return total number of canonical activities.
-    """
-    db = get_stl_db()
-    cur = db.execute("SELECT COUNT(*) AS cnt FROM activity")
-    row = cur.fetchone()
-    return row["cnt"] if row else 0
+def get_canonical_activity_count(only_missing_training_log: bool = False) -> int:
+    q = (
+        sqla_db.session.query(Activity.id)
+        .outerjoin(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
+    )
+
+    if only_missing_training_log:
+        q = q.filter(TrainingLogData.canonical_activity_id.is_(None))
+
+    return q.count()
 
 
 def get_canonical_activity(activity_id: int):
