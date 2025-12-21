@@ -37,7 +37,8 @@ from app.services.seasons import (
     get_season_summary,
     get_season_weekly_series,
     get_season_traininglog_category_breakdown,
-    get_season_comparison_rows
+    get_season_comparison_rows,
+    get_season_cumulative_series,
 )
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
@@ -551,6 +552,18 @@ def season_view():
     summary = None
     weekly = None
     breakdown = None
+
+    compare_ids = request.args.getlist("compare_id", type=int)
+    compare_ids_param = request.args.get("compare_id", "").strip()
+    if compare_ids_param:
+        for part in compare_ids_param.split(","):
+            part = part.strip()
+            if part.isdigit():
+                compare_ids.append(int(part))
+    compare_ids = sorted(set(compare_ids))
+    if selected:
+        compare_ids = [cid for cid in compare_ids if cid != selected.id]
+    
     if selected:
         summary = get_season_summary(selected.start_date, selected.end_date, use_local=True)
         weekly = get_season_weekly_series(selected.start_date, selected.end_date, use_local=True)
@@ -561,6 +574,15 @@ def season_view():
 
     compare_rows = get_season_comparison_rows(seasons)
 
+    overlay = None
+    if selected:
+        primary = get_season_cumulative_series(selected, use_local=True)
+
+        compare_seasons = [s for s in seasons if s.id in compare_ids and s.id != selected.id]
+        others = [get_season_cumulative_series(s, use_local=True) for s in compare_seasons]
+
+        overlay = {"primary": primary, "others": others}
+        
     return render_template(
         "season.html",
         seasons=seasons,
@@ -570,6 +592,8 @@ def season_view():
         weekly=weekly,
         breakdown=breakdown,
         compare_rows=compare_rows,
+        compare_ids=compare_ids,
+        overlay=overlay,
     )
 
 @views.route("/activitylist")

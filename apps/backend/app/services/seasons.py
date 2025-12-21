@@ -371,3 +371,30 @@ def get_season_comparison_rows(seasons) -> List[Dict[str, Any]]:
         })
 
     return rows
+
+def build_cumulative_from_weekly(weekly: dict) -> dict:
+    """
+    weekly: {"weeks": [{"hours": float, ...}, ...]}
+    returns: {"weeks": [{"week_index": 1, "weekly_hours": x, "cumulative_hours": y}, ...]}
+    """
+    weeks = weekly.get("weeks") or []
+    out = []
+    cum = 0.0
+    for i, w in enumerate(weeks, start=1):
+        wh = float(w.get("hours") or 0.0)
+        cum += wh
+        out.append({
+            "week_index": i,
+            "weekly_hours": wh,
+            "cumulative_hours": cum,
+        })
+    return {"weeks": out}
+
+def get_season_cumulative_series(season, use_local=True) -> dict:
+    weekly = get_season_weekly_series(season.start_date, season.end_date, use_local=use_local)
+    cum = build_cumulative_from_weekly(weekly)
+    return {
+        "season_id": season.id,
+        "label": season.name,
+        "weeks": cum["weeks"],
+    }
