@@ -67,9 +67,9 @@
     {% for w in weeks %}
       <div class="week-col">
         <a class="week-link"
-           href="{{ url_for('views.dashboard', week_offset=w.week_offset) }}"
-           title="Go to dashboard week starting {{ w.week_start }}">
-          wk
+        href="{{ url_for('views.dashboard', week_offset=w.week_offset) }}"
+        title="Open dashboard for week of {{ w.week_start }}">
+        {{ w.week_label }}
         </a>
       </div>
 

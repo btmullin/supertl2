@@ -887,6 +887,12 @@ button:hover {
   background: var(--theme-background-color-light);
   color: var(--theme-color-accent);
   text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.4rem 0.3rem;
+  text-align: center;
+  line-height: 1.1;
 }
 
 .week-link:hover {

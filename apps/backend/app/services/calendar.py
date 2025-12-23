@@ -237,9 +237,12 @@ def get_calendar_month_overview(year: int, month: int, use_local: bool = True):
         week_dist_m = sum(d["distance_m"] for d in days)
         week_acts = sum(d["activities"] for d in days)
 
+        week_label = week_start.strftime("%b %-d")
+
         weeks.append({
             "week_start": week_start,
             "week_offset": week_offset_for_date(week_start),
+            "week_label": week_label,
             "days": days,
             "week_totals": {
                 "hours": round(week_hours, 1),
