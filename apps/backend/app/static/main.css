@@ -564,3 +564,23 @@ button:hover {
 .filter-checkbox span {
   line-height: 1;
 }
+
+.season-top-header {
+  display: flex;
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.season-summary-header {
+  flex: 0 0 280px;
+}
+
+.season-distribution-header {
+  flex: 1 1 600px;
+}
+
+.season-top-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}

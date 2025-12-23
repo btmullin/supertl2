@@ -47,64 +47,75 @@
         {% endif %}
 
         {% if selected_season %}
-        <label>{{ selected_season.name }}</label>
+        <label>{{ selected_season.name }} Season Summary</label>
         <p style="opacity:0.85; margin-top:0.25rem;">
             {{ selected_season.start_date.strftime('%B %d, %Y') }}
             &ndash;
             {{ selected_season.end_date.strftime('%B %d, %Y') }}
         </p>
 
-        {% if summary %}
-            <div class="summary-container" style="margin-top: 1rem;">
-            <table class="styled-table">
-                <tbody>
-                <tr><th>Total hours</th><td style="text-align:right;">{{ "%.1f"|format(summary.total_hours) }}</td></tr>
-                <tr><th>Sessions</th><td style="text-align:right;">{{ summary.sessions }}</td></tr>
-                <tr><th>Weeks</th><td style="text-align:right;">{{ summary.weeks }}</td></tr>
-                <tr><th>Avg hours / week</th><td style="text-align:right;">{{ "%.1f"|format(summary.avg_hours_per_week) }}</td></tr>
-                </tbody>
-            </table>
-            {% if summary and summary.is_in_progress %}
-              <p style="opacity:0.8;">To date through {{ summary.effective_end }}</p>
-            {% endif %}
+        <div class="season-top-row">
+          <div class="season-top-header">
+            <div class="season-summary-header">
+              <label>Season Summary</label>
             </div>
-        {% endif %}
-
-        {% set items = breakdown.get("items") if breakdown else None %}
-        {% if items and items|length %}
-          <div class="season-chart-container">
-            <label>Activity type distribution</label>
-
-            <div style="display:flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;">
-              <!-- Donut -->
-              <div style="width: 360px; height: 500px;">
-                <canvas id="seasonDonutChart" style="width:100%; height:100%;"></canvas>
-              </div>
-
-              <!-- Table -->
-              <div class="summary-container" style="margin: 0;">
-                <table class="styled-table">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th style="text-align:right;">Hours</th>
-                      <th style="text-align:right;">%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for it in items %}
-                      <tr>
-                        <td>{{ it["label"] }}</td>
-                        <td style="text-align:right;">{{ "%.1f"|format(it["hours"]) }}</td>
-                        <td style="text-align:right;">{{ "%.0f"|format(it["percent"]) }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
+            <div class="season-distribution-header">
+              <label>Activity Type Distribution</label>
             </div>
           </div>
-        {% endif %}
+          <div class="season-top-content">
+            {% if summary %}
+              <div class="season-summary">
+                <div class="summary-container" style="margin-top: 1rem;">
+                  <table class="styled-table">
+                    <tbody>
+                      <tr><th>Total hours</th><td style="text-align:right;">{{ "%.1f"|format(summary.total_hours) }}</td></tr>
+                      <tr><th>Sessions</th><td style="text-align:right;">{{ summary.sessions }}</td></tr>
+                      <tr><th>Weeks</th><td style="text-align:right;">{{ summary.weeks }}</td></tr>
+                      <tr><th>Avg hours / week</th><td style="text-align:right;">{{ "%.1f"|format(summary.avg_hours_per_week) }}</td></tr>
+                    </tbody>
+                  </table>
+
+                  {% if summary.is_in_progress %}
+                    <p style="opacity:0.8;">To date through {{ summary.effective_end }}</p>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+
+            {% set items = breakdown.get("items") if breakdown else None %}
+            {% if items and items|length %}
+              <div class="season-distribution">
+                <div style="display:flex; gap: 1.5rem; align-items: flex-start;">
+                  <div style="width: 320px; height: 320px;">
+                    <canvas id="seasonDonutChart"></canvas>
+                  </div>
+
+                  <div class="summary-container" style="margin: 0;">
+                    <table class="styled-table">
+                      <thead>
+                        <tr>
+                          <th>Category</th>
+                          <th style="text-align:right;">Hours</th>
+                          <th style="text-align:right;">%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for it in items %}
+                        <tr>
+                          <td>{{ it["label"] }}</td>
+                          <td style="text-align:right;">{{ "%.1f"|format(it["hours"]) }}</td>
+                          <td style="text-align:right;">{{ "%.0f"|format(it["percent"]) }}</td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
 
         {% if weekly and weekly.weeks and weekly.weeks|length %}
         <div class="season-chart-container" style="margin-top: 1.5rem;">
@@ -125,9 +136,9 @@
           </div>
         {% endif %}
 
-        {% if compare_rows and compare_rows|length %}
+        {% if compare_rows and compare_rows|length > 1 %}
           <div class="section">
-            <label>Season comparison</label>
+            <label>Season Comparison</label>
 
             {% if overlay %}
               <div class="season-chart-container" style="margin-top: 1.5rem;">
