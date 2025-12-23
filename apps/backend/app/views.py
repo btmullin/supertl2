@@ -39,6 +39,7 @@ from app.services.seasons import (
     get_season_traininglog_category_breakdown,
     get_season_comparison_rows,
     get_season_cumulative_series,
+    get_season_weekly_stacked_by_category,
 )
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
@@ -583,7 +584,12 @@ def season_view():
     if selected:
         summary = get_season_summary(selected.start_date, selected.end_date, use_local=True)
         weekly = get_season_weekly_series(selected.start_date, selected.end_date, use_local=True)
-
+        stacked_weekly = get_season_weekly_stacked_by_category(
+            selected.start_date,
+            selected.end_date,
+            use_local=True,
+            rollup_depth=0
+        )
         start_dt = _as_datetime_start(selected.start_date)
         end_dt_excl = _as_datetime_end_exclusive(selected.end_date)
         breakdown = get_season_traininglog_category_breakdown(start_dt, end_dt_excl, use_local=True, rollup_depth=0, min_percent=2.0)
@@ -620,6 +626,7 @@ def season_view():
         compare_rows=compare_rows,
         compare_ids=compare_ids,
         overlay=overlay,
+        stacked_weekly=stacked_weekly,
     )
 
 @views.route("/activitylist")

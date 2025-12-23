@@ -108,12 +108,21 @@
 
         {% if weekly and weekly.weeks and weekly.weeks|length %}
         <div class="season-chart-container" style="margin-top: 1.5rem;">
-        <label>Weekly training volume</label>
+        <label>Weekly Training Volume</label>
 
         <div style="height: 260px;">
             <canvas id="seasonWeeklyChart" style="width:100%; height:100%;"></canvas>
         </div>
         </div>
+        {% endif %}
+
+        {% if stacked_weekly and stacked_weekly["weeks"] and stacked_weekly["datasets"] %}
+          <div class="season-chart-container" style="margin-top: 1.5rem;">
+            <label>Weekly Training Volume by Sport</label>
+            <div style="height: 340px;">
+              <canvas id="seasonStackedWeeklyChart" style="width:100%; height:100%;"></canvas>
+            </div>
+          </div>
         {% endif %}
 
         {% if compare_rows and compare_rows|length %}
@@ -399,6 +408,91 @@
 </script>
 {% endif %}
 
+
+{% if stacked_weekly and stacked_weekly["weeks"] and stacked_weekly["datasets"] %}
+<script>
+  (function () {
+    const stacked = {{ stacked_weekly | tojson }};
+    const canvas = document.getElementById("seasonStackedWeeklyChart");
+    if (!stacked || !canvas) return;
+
+    const weeks = stacked["weeks"] || [];
+    const ds = stacked["datasets"] || [];
+
+    const labels = weeks.map(w => w.label);
+
+    const datasets = ds.map(d => ({
+      label: d.label,
+      data: d.hours,
+      borderWidth: 1
+    }));
+
+    // Helpers for computing dashboard week_offset (Monday-based)
+    function toLocalMidnight(dateStrYYYYMMDD) {
+      // 'YYYY-MM-DD' interpreted as local date
+      const [y, m, d] = dateStrYYYYMMDD.split("-").map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+
+    function mondayOfWeekLocal(dt) {
+      const d = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
+      const day = d.getDay(); // 0=Sun..6=Sat
+      const diffToMonday = (day + 6) % 7; // Mon->0, Tue->1, ..., Sun->6
+      d.setDate(d.getDate() - diffToMonday);
+      return d;
+    }
+
+    function weeksBetween(a, b) {
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      return Math.round((a.getTime() - b.getTime()) / msPerWeek);
+    }
+
+    const weekStarts = weeks.map(w => w.week_start); // YYYY-MM-DD
+
+    if (canvas._chartInstance) canvas._chartInstance.destroy();
+
+    canvas._chartInstance = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: "index", intersect: true },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: "Hours" } }
+        },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toFixed(1)} h`
+            }
+          }
+        },
+        onClick: function (evt, elements) {
+          if (!elements || !elements.length) return;
+
+          // elements[0].index is the x-index (week index)
+          const idx = elements[0].index;
+          const wsStr = weekStarts[idx];
+          if (!wsStr) return;
+
+          const clickedWeekStart = toLocalMidnight(wsStr);
+          const currentWeekStart = mondayOfWeekLocal(new Date());
+          const clickedWeekMonday = mondayOfWeekLocal(clickedWeekStart);
+
+          const weekOffset = weeksBetween(clickedWeekMonday, currentWeekStart);
+
+          // Navigate to your existing dashboard route
+          window.location.href = "{{ url_for('views.dashboard') }}" + "?week_offset=" + weekOffset;
+        }
+      }
+    });
+  })();
+</script>
+{% endif %}
 
 
 {% endblock %}

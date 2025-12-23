@@ -398,3 +398,93 @@ def get_season_cumulative_series(season, use_local=True) -> dict:
         "label": season.name,
         "weeks": cum["weeks"],
     }
+
+def get_season_weekly_stacked_by_category(
+    season_start,
+    season_end,
+    use_local=True,
+    rollup_depth=1,   # top-level sport/category
+):
+    """
+    Returns weekly stacked hours by TrainingLog category (rolled up to rollup_depth).
+    Only includes TrainingLogData.isTraining == 1.
+    """
+
+    ts_col = Activity.start_time_local if use_local and hasattr(Activity, "start_time_local") else Activity.start_time_utc
+
+    start_dt = _as_datetime_start(season_start)
+    end_dt_excl = _as_datetime_end_exclusive(season_end)
+
+    # Pull timestamp, moving time, and leaf categoryId (training-only)
+    rows = (
+        sqla_db.session.query(
+            ts_col,
+            Activity.moving_time_s,
+            TrainingLogData.categoryId,
+        )
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
+        .filter(
+            TrainingLogData.isTraining == 1,
+            TrainingLogData.categoryId.isnot(None),
+            ts_col >= start_dt,
+            ts_col < end_dt_excl,
+        )
+        .all()
+    )
+
+    # Category metadata
+    full_paths, depth_map = _build_category_full_paths()
+    parent_map = _build_category_parent_map()
+
+    # Buckets: week_start -> bucket_category_id -> seconds
+    buckets = defaultdict(lambda: defaultdict(int))
+
+    for ts, secs, cat_id in rows:
+        dt = _coerce_to_datetime(ts)  # keep this if you needed it earlier (string timestamps)
+        if dt is None:
+            continue
+
+        d = dt.date()
+        ws = _week_start(d, week_start=0)  # Monday start
+
+        leaf = int(cat_id)
+        bucket_id = _ancestor_at_depth(leaf, rollup_depth, parent_map, depth_map)
+        buckets[ws][bucket_id] += int(secs or 0)
+
+    # Build ordered week list for the full season (zeros included)
+    week_starts = _daterange_weeks(season_start, season_end, week_start=0)
+
+    # Determine which bucket categories appear (stable ordering by total)
+    totals_by_bucket = defaultdict(int)
+    for ws in week_starts:
+        for cid, sec in buckets.get(ws, {}).items():
+            totals_by_bucket[cid] += sec
+
+    bucket_ids = sorted(totals_by_bucket.keys(), key=lambda cid: totals_by_bucket[cid], reverse=True)
+
+    # Labels and dataset
+    weeks = []
+    for ws in week_starts:
+        weeks.append({
+            "week_start": ws.isoformat(),
+            "label": ws.strftime("%b %d"),
+        })
+
+    datasets = []
+    for cid in bucket_ids:
+        label = full_paths.get(cid) or f"Category {cid}"
+        data = []
+        for ws in week_starts:
+            sec = buckets.get(ws, {}).get(cid, 0)
+            data.append(sec / 3600.0)
+        datasets.append({
+            "category_id": cid,
+            "label": label,
+            "hours": data,
+        })
+
+    return {
+        "weeks": weeks,         # [{week_start, label}, ...]
+        "datasets": datasets,   # [{label, hours:[...]}...]
+        "rollup_depth": rollup_depth,
+    }
