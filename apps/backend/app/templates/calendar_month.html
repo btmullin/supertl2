@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="whole-body">
+<div class="calendar-month">
+
+  <div class="calendar-month-header">
+    <div class="calendar-month-title">
+      <h1 class="calendar-h1">Training Calendar</h1>
+
+      <div class="calendar-month-nav">
+        {# prev/next month logic #}
+        {% set prev_year = year %}
+        {% set prev_month = month - 1 %}
+        {% if prev_month < 1 %}
+          {% set prev_month = 12 %}
+          {% set prev_year = year - 1 %}
+        {% endif %}
+
+        {% set next_year = year %}
+        {% set next_month = month + 1 %}
+        {% if next_month > 12 %}
+          {% set next_month = 1 %}
+          {% set next_year = year + 1 %}
+        {% endif %}
+
+        <a class="cal-nav-btn" href="{{ url_for('views.calendar_view', view='month', year=prev_year, month=prev_month) }}">&lsaquo;</a>
+
+        <div class="cal-month-label">
+          <span class="cal-month-name">{{ month_label }}</span>
+          <span class="cal-month-year">{{ year }}</span>
+        </div>
+
+        <a class="cal-nav-btn" href="{{ url_for('views.calendar_view', view='month', year=next_year, month=next_month) }}">&rsaquo;</a>
+
+        <a class="cal-year-link" href="{{ url_for('views.calendar_view', view='year', year=year) }}">Year</a>
+        <a class="cal-today" href="{{ url_for('views.calendar_view', view='month', year=now_year, month=now_month) }}">Today</a>
+      </div>
+    </div>
+
+    <div class="calendar-month-kpis">
+      <div class="kpi">
+        <div class="kpi-value">{{ month_totals.hours }}</div>
+        <div class="kpi-label">Hours</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">{{ month_totals.distance_m | km(1) }}</div>
+        <div class="kpi-label">km</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">{{ month_totals.activities }}</div>
+        <div class="kpi-label">Activities</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="month-grid">
+    <div class="month-grid-header week-col"></div>
+    <div class="month-grid-header">Mon</div>
+    <div class="month-grid-header">Tue</div>
+    <div class="month-grid-header">Wed</div>
+    <div class="month-grid-header">Thu</div>
+    <div class="month-grid-header">Fri</div>
+    <div class="month-grid-header">Sat</div>
+    <div class="month-grid-header">Sun</div>
+    <div class="month-grid-header week-total-col">Total</div>
+
+    {% for w in weeks %}
+      <div class="week-col">
+        <a class="week-link"
+        href="{{ url_for('views.dashboard', week_offset=w.week_offset) }}"
+        title="Open dashboard for week of {{ w.week_start }}">
+        {{ w.week_label }}
+        </a>
+      </div>
+
+      {% for d in w.days %}
+        {# simplest drill: send day click to the dashboard week #}
+        <a class="day-cell {% if not d.in_month %}out-month{% endif %} {% if d.hours > 0 %}has-training{% endif %}"
+           href="{{ url_for('views.dashboard', week_offset=w.week_offset) }}"
+           title="{{ d.iso }}: {{ d.hours }} h, {{ d.distance_m | km(1) }} km, {{ d.activities }} activities">
+
+          <div class="day-top">
+            <div class="day-num">{{ d.day }}</div>
+          </div>
+
+          <div class="day-metrics">
+            {% if d.hours > 0 %}
+              <div class="day-hours">{{ d.hours }}h</div>
+              <div class="day-dist">{{ d.distance_m | km(1) }} km</div>
+            {% else %}
+              <div class="day-rest">—</div>
+            {% endif %}
+          </div>
+
+        </a>
+      {% endfor %}
+        <div class="week-total-col">
+        <a class="week-total"
+            href="{{ url_for('views.dashboard', week_offset=w.week_offset) }}"
+            title="Week total: {{ w.week_totals.hours }} h, {{ w.week_totals.distance_m | km(1) }} km, {{ w.week_totals.activities }} activities">
+            <div class="week-total-hours">{{ w.week_totals.hours }}h</div>
+            <div class="week-total-dist">{{ w.week_totals.distance_m | km(1) }} km</div>
+        </a>
+        </div>
+      {% endfor %}
+  </div>
+
+</div>
+</div>
+{% endblock %}
