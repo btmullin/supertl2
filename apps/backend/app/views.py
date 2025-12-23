@@ -41,6 +41,7 @@ from app.services.seasons import (
     get_season_cumulative_series,
     get_season_weekly_stacked_by_category,
 )
+from app.services.calendar import get_calendar_year_overview
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
@@ -261,9 +262,25 @@ def dashboard():
     )
 
 @views.route("/calendar")
-def calendar():
-    return render_template("calendar.html")
+def calendar_view():
+    view = request.args.get("view", "year")
+    if view != "year":
+        # For now, only year is implemented; you can add month/week/day later.
+        view = "year"
 
+    today = date.today()
+    year = request.args.get("year", type=int) or today.year
+
+    data = get_calendar_year_overview(year=year, use_local=True)
+
+    return render_template(
+        "calendar.html",
+        year=data["year"],
+        year_totals=data["year_totals"],
+        months=data["months"],
+        now_month=today.month,
+        now_year=today.year
+    )
 
 @views.route("/analysis")
 def analysis():

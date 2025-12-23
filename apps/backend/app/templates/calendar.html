@@ -1,7 +1,81 @@
-{% extends 'base.html' %} {% block content %}
-<div class="whole-body">
-  <h2>Calendar View</h2>
-  <p>Big chart</p>
-  <p>Probably the summary for the view on the side</p>
+{% extends "base.html" %}
+{% block content %}
+
+<div class="calendar-year">
+
+  <div class="calendar-year-header">
+    <div class="calendar-year-title">
+      <h1 class="calendar-h1">Training Calendar</h1>
+
+      <div class="calendar-year-nav">
+        <a class="cal-nav-btn" href="{{ url_for('views.calendar_view', view='year', year=year-1) }}">&lsaquo;</a>
+        <div class="cal-year">{{ year }}</div>
+        <a class="cal-nav-btn" href="{{ url_for('views.calendar_view', view='year', year=year+1) }}">&rsaquo;</a>
+
+        <a class="cal-today" href="{{ url_for('views.calendar_view', view='year') }}">Today</a>
+      </div>
+    </div>
+
+    <div class="calendar-year-kpis">
+      <div class="kpi">
+        <div class="kpi-value">{{ year_totals.hours }}</div>
+        <div class="kpi-label">Hours</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">{{ year_totals.distance | km(0) }}</div>
+        <div class="kpi-label">km</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">{{ year_totals.activities }}</div>
+        <div class="kpi-label">Activities</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">{{ year_totals.training_days }}</div>
+        <div class="kpi-label">Training Days</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calendar-month-grid">
+    {% for m in months %}
+      <a class="month-tile"
+         href="{{ url_for('views.calendar_view', view='month', year=year, month=m.month) }}"
+         title="{{ m.label }}: {{ m.hours }} hours, {{ m.activities }} activities">
+
+        <div class="month-tile-header">
+          <div class="month-hours">
+            <div class="month-hours-value">{{ m.hours }}</div>
+            <div class="month-hours-label">HOURS</div>
+          </div>
+          <div class="month-name">{{ m.label }}</div>
+        </div>
+
+        <div class="month-sub">
+          <div class="month-sub-item">{{ m.activities }} activities</div>
+          <div class="month-sub-item">{{ m.distance | km(1) }} km </div>
+        </div>
+        {# spark bars: normalize within month #}
+        {% set ns = namespace(max_h=0) %}
+        {% for d in m.days %}
+          {% if d.hours > ns.max_h %}
+            {% set ns.max_h = d.hours %}
+          {% endif %}
+        {% endfor %}
+
+        <div class="spark">
+          {% for d in m.days %}
+            {% set pct = 0 %}
+            {% if ns.max_h > 0 %}
+              {% set pct = (d.hours / ns.max_h) * 100 %}
+            {% endif %}
+            <div class="spark-bar" style="height: {{ pct }}%"></div>
+          {% endfor %}
+        </div>
+
+      </a>
+    {% endfor %}
+  </div>
+
 </div>
+
 {% endblock %}

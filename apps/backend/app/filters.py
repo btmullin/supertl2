@@ -105,7 +105,7 @@ def format_timeonly(value):
     except (ValueError, TypeError):
         return value  # Fallback if something goes wrong
 
-def format_kilometers(meters):
+def format_kilometers(meters, decimals=2):
     """
     Converts a distance in meters to a formatted string in kilometers.
 
@@ -121,7 +121,7 @@ def format_kilometers(meters):
         if meters == 0:
             return "--"
         km = float(meters) / 1000
-        return f"{km:.2f} km"
+        return f"{km:.{decimals}f}"
     except (ValueError, TypeError):
         return meters
 

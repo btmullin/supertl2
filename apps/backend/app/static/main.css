@@ -584,3 +584,208 @@ button:hover {
   gap: 2rem;
   align-items: flex-start;
 }
+
+/* ===========================
+   Calendar: Year Overview
+   =========================== */
+
+.calendar-year {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  background: var(--theme-background-color);
+  color: var(--theme-content-font-color);
+}
+
+.calendar-year-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.calendar-year-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendar-h1 {
+  margin: 0;
+}
+
+.calendar-year-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cal-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  text-decoration: none;
+  border-radius: var(--theme-corner-radius);
+  border: 1px solid var(--theme-color-accent-light);
+  background: var(--theme-background-color-light);
+  color: var(--theme-color-accent);}
+
+.cal-year {
+  font-size: 1.2rem;
+  font-weight: 600;
+  min-width: 4rem;
+  text-align: center;
+  color: var(--theme-color-accent);
+}
+
+.cal-today {
+  margin-left: 0.5rem;
+  text-decoration: none;
+  font-size: 0.95rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--theme-corner-radius);
+  border: 1px solid var(--theme-color-accent-light);
+  background: var(--theme-background-color-light);
+  color: var(--theme-color-accent);
+}
+
+.cal-nav-btn:hover,
+.cal-today:hover {
+  background: var(--theme-color-primary-light);
+  border-color: var(--theme-color-primary);
+}
+
+.calendar-year-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.kpi {
+  padding: 0.75rem 0.9rem;
+  background: var(--theme-background-color-light);
+  border: 1px solid var(--theme-color-accent-light);
+  border-radius: var(--theme-corner-radius);
+}
+
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--theme-color-accent);
+}
+
+.kpi-label {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin-top: 0.25rem;
+  color: var(--theme-color-accent);
+}
+
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.month-tile {
+  display: block;
+  text-decoration: none;
+  padding: 0.9rem;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  background: var(--theme-background-color-light);
+  border: 1px solid var(--theme-color-accent-light);
+  border-radius: calc(var(--theme-corner-radius) + 4px);
+  color: var(--theme-content-font-color);}
+
+.month-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 63, 92, 0.15); /* accent shadow */
+  border-color: var(--theme-color-primary);
+}
+
+.month-tile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.month-hours-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--theme-color-accent);
+}
+
+.month-hours-label {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+  letter-spacing: 0.04em;
+  color: var(--theme-color-accent);
+}
+
+.month-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 0.8;
+  color: var(--theme-color-accent);
+  letter-spacing: 0.08em;
+}
+
+.month-sub {
+  display: flex;
+  gap: 0.8rem;
+  font-size: 0.9rem;
+  opacity: 0.75;
+  margin-bottom: 0.75rem;
+  color: var(--theme-color-accent);
+}
+
+.spark {
+  height: 80px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: end;
+  gap: 2px;
+}
+
+.spark-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: var(--theme-color-primary);
+  opacity: 0.85;
+}
+
+.month-tile:hover .spark-bar {
+  opacity: 1.0;
+}
+
+/* Responsive tweaks */
+@media (max-width: 1100px) {
+  .calendar-month-grid {
+    grid-template-columns: repeat(3, minmax(230px, 1fr));
+  }
+  .calendar-year-kpis {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .calendar-month-grid {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .calendar-month-grid {
+    grid-template-columns: 1fr;
+  }
+}
