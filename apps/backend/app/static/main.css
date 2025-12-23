@@ -789,3 +789,222 @@ button:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===========================
+   Calendar: Month Overview
+   =========================== */
+
+.calendar-month {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem;
+  color: var(--theme-content-font-color);
+}
+
+.calendar-month-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.calendar-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cal-month-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+  min-width: 9rem;
+  align-items: center;
+}
+
+.cal-month-name {
+  font-weight: 700;
+  color: var(--theme-color-accent);
+}
+
+.cal-month-year {
+  opacity: 0.8;
+  color: var(--theme-color-accent);
+}
+
+.cal-year-link {
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--theme-corner-radius);
+  border: 1px solid var(--theme-color-accent-light);
+  background: var(--theme-background-color-light);
+  color: var(--theme-color-accent);
+}
+
+.cal-year-link:hover {
+  background: var(--theme-color-primary-light);
+  border-color: var(--theme-color-primary);
+}
+
+.calendar-month-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+/* Grid: 8 columns (week link + 7 days) */
+.month-grid {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr) 110px;
+  gap: 8px;
+}
+
+.month-grid-header {
+  font-weight: 600;
+  color: var(--theme-color-accent);
+  opacity: 0.85;
+  padding: 0.25rem 0.25rem;
+}
+
+.week-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.week-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--theme-corner-radius);
+  border: 1px solid var(--theme-color-accent-light);
+  background: var(--theme-background-color-light);
+  color: var(--theme-color-accent);
+  text-decoration: none;
+}
+
+.week-link:hover {
+  background: var(--theme-color-primary-light);
+  border-color: var(--theme-color-primary);
+}
+
+.day-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  border-radius: var(--theme-corner-radius);
+  border: 1px solid var(--theme-color-accent-light);
+  background: var(--theme-background-color-light);
+  padding: 0.5rem 0.55rem;
+  min-height: 86px;
+  color: var(--theme-content-font-color);
+}
+
+.day-cell:hover {
+  border-color: var(--theme-color-primary);
+  box-shadow: 0 6px 18px rgba(0, 63, 92, 0.12);
+}
+
+.day-cell.out-month {
+  opacity: 0.45;
+}
+
+.day-top {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.day-num {
+  font-weight: 700;
+  color: var(--theme-color-accent);
+}
+
+.day-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+}
+
+.day-hours {
+  font-weight: 700;
+  color: var(--theme-color-accent);
+}
+
+.day-dist {
+  opacity: 0.8;
+  color: var(--theme-color-accent);
+}
+
+.day-rest {
+  opacity: 0.45;
+}
+
+/* subtle "has training" indicator */
+.day-cell.has-training {
+  background: linear-gradient(
+    180deg,
+    var(--theme-background-color-light),
+    var(--theme-color-primary-light)
+  );
+}
+
+@media (max-width: 900px) {
+  .month-grid {
+    grid-template-columns: 40px repeat(7, 1fr) 90px;
+    gap: 6px;
+  }
+  .week-link {
+    width: 34px;
+    height: 34px;
+  }
+  .day-cell {
+    min-height: 78px;
+  }
+}
+
+@media (max-width: 700px) {
+  .calendar-month-kpis {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}
+
+.week-total-col {
+  display: flex;
+  align-items: stretch;
+}
+
+.week-total {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  border-radius: var(--theme-corner-radius);
+  border: 1px solid var(--theme-color-accent-light);
+  background: var(--theme-background-color-light);
+  padding: 0.5rem 0.6rem;
+  color: var(--theme-color-accent);
+}
+
+.week-total:hover {
+  background: var(--theme-color-primary-light);
+  border-color: var(--theme-color-primary);
+}
+
+.week-total-hours {
+  font-weight: 800;
+}
+
+.week-total-dist {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
