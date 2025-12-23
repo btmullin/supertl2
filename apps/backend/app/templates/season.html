@@ -182,6 +182,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Weekly Training Volume Bar Chart -->
 {% if weekly and weekly.weeks and weekly.weeks|length %}
 <script>
   (function () {
@@ -193,9 +195,31 @@
     const labels = weekly.weeks.map(w => w.label);
     const data = weekly.weeks.map(w => Number(w.hours) || 0);
 
+    // ✅ Needed for click -> dashboard
+    const weekStarts = weekly.weeks.map(w => w.week_start); // "YYYY-MM-DD"
+
     const canvas = document.getElementById("seasonWeeklyChart");
     if (!canvas) {
       return;
+    }
+
+    // Helpers for computing dashboard week_offset (Monday-based)
+    function toLocalMidnight(dateStrYYYYMMDD) {
+      const [y, m, d] = dateStrYYYYMMDD.split("-").map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+
+    function mondayOfWeekLocal(dt) {
+      const d = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
+      const day = d.getDay(); // 0=Sun..6=Sat
+      const diffToMonday = (day + 6) % 7; // Mon->0, Tue->1, ..., Sun->6
+      d.setDate(d.getDate() - diffToMonday);
+      return d;
+    }
+
+    function weeksBetween(a, b) {
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      return Math.round((a.getTime() - b.getTime()) / msPerWeek);
     }
 
     // Prevent duplicate charts on reload / navigation
@@ -221,14 +245,10 @@
         maintainAspectRatio: false,
         animation: false,
         scales: {
-          x: {
-            grid: { display: false }
-          },
+          x: { grid: { display: false } },
           y: {
             beginAtZero: true,
-            ticks: {
-              callback: (value) => value + " h"
-            }
+            ticks: { callback: (value) => value + " h" }
           }
         },
         plugins: {
@@ -238,6 +258,23 @@
               label: (ctx) => ctx.parsed.y.toFixed(1) + " hours"
             }
           }
+        },
+
+        // ✅ Click -> dashboard
+        onClick: function (evt, elements) {
+          if (!elements || !elements.length) return;
+
+          const idx = elements[0].index;
+          const wsStr = weekStarts[idx];
+          if (!wsStr) return;
+
+          const clickedWeekStart = toLocalMidnight(wsStr);
+          const currentWeekStart = mondayOfWeekLocal(new Date());
+          const clickedWeekMonday = mondayOfWeekLocal(clickedWeekStart);
+
+          const weekOffset = weeksBetween(clickedWeekMonday, currentWeekStart);
+
+          window.location.href = "{{ url_for('views.dashboard') }}" + "?week_offset=" + weekOffset;
         }
       }
     });
