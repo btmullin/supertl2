@@ -53,6 +53,22 @@ PER_PAGE = 25
 
 views = Blueprint("views", __name__)
 
+from datetime import date
+from zoneinfo import ZoneInfo
+
+def _today_local_date() -> date:
+    return datetime.now(ZoneInfo("America/Chicago")).date()
+
+def _week_start(d: date, week_start: int = 0) -> date:
+    delta = (d.weekday() - week_start) % 7
+    return d - timedelta(days=delta)
+
+def _week_index(season_start: date, day: date, week_start: int = 0) -> int:
+    # Week index is 1-based, aligned to your weekly bucketing (Monday start)
+    start_ws = _week_start(season_start, week_start)
+    day_ws = _week_start(day, week_start)
+    return int(((day_ws - start_ws).days // 7) + 1)
+
 def get_or_create_training_log(activity_id: str) -> TrainingLogData:
     """
     Fetch TrainingLogData for the given Strava activityId, or create it if missing.
@@ -578,11 +594,21 @@ def season_view():
     if selected:
         primary = get_season_cumulative_series(selected, use_local=True)
 
+        # If in progress, mark "to date" and add a week marker
+        today = _today_local_date()
+        in_progress = today < selected.end_date
+        current_week_idx = _week_index(selected.start_date, min(today, selected.end_date), week_start=0) if in_progress else None
+
         compare_seasons = [s for s in seasons if s.id in compare_ids and s.id != selected.id]
         others = [get_season_cumulative_series(s, use_local=True) for s in compare_seasons]
 
-        overlay = {"primary": primary, "others": others}
-        
+        overlay = {
+            "primary": primary,
+            "others": others,
+            "primary_in_progress": in_progress,
+            "primary_current_week": current_week_idx,  # 1-based
+        }
+
     return render_template(
         "season.html",
         seasons=seasons,

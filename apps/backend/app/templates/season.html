@@ -298,35 +298,31 @@
     const primary = overlay.primary;
     const others = overlay.others || [];
 
-    // Build x labels up to the longest season
     const maxWeeks = Math.max(
       primary.weeks.length,
       ...others.map(s => (s.weeks || []).length)
     );
-
     const labels = Array.from({length: maxWeeks}, (_, i) => `W${i+1}`);
 
     function seriesToData(s) {
       const arr = new Array(maxWeeks).fill(null);
       (s.weeks || []).forEach(w => {
         const idx = (w.week_index || 0) - 1;
-        if (idx >= 0 && idx < maxWeeks) {
-          arr[idx] = w.cumulative_hours;
-        }
+        if (idx >= 0 && idx < maxWeeks) arr[idx] = w.cumulative_hours;
       });
       return arr;
     }
 
-    // Primary dataset
+    const primaryLabel = overlay.primary_in_progress ? `${primary.label} (to date)` : primary.label;
+
     const datasets = [{
-      label: primary.label,
+      label: primaryLabel,
       data: seriesToData(primary),
       borderWidth: 3,
       tension: 0.2,
       spanGaps: true
     }];
 
-    // Comparison datasets
     others.forEach((s) => {
       datasets.push({
         label: s.label,
@@ -337,9 +333,44 @@
       });
     });
 
-    if (canvas._chartInstance) {
-      canvas._chartInstance.destroy();
-    }
+    // Vertical marker at the selected season's current week (boundary)
+    const weekMarkerPlugin = {
+      id: 'weekMarkerPlugin',
+      afterDraw(chart) {
+        const week = overlay.primary_current_week;
+        if (!overlay.primary_in_progress || !week) return;
+
+        const xScale = chart.scales.x;
+        const yScale = chart.scales.y;
+        if (!xScale || !yScale) return;
+
+        const idx = week - 1;
+        if (idx < 0 || idx >= labels.length) return;
+
+        const x = xScale.getPixelForTick(idx);
+        const ctx = chart.ctx;
+
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#666';   // neutral marker
+        ctx.setLineDash([6, 4]);
+
+        ctx.beginPath();
+        ctx.moveTo(x, yScale.top);
+        ctx.lineTo(x, yScale.bottom);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#666';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('to date', x + 6, yScale.top + 14);
+        ctx.restore();
+      }
+    };
+
+    if (canvas._chartInstance) canvas._chartInstance.destroy();
 
     canvas._chartInstance = new Chart(canvas.getContext("2d"), {
       type: "line",
@@ -361,11 +392,13 @@
           y: { beginAtZero: true, title: { display: true, text: "Hours" } },
           x: { title: { display: true, text: "Season week" } }
         }
-      }
+      },
+      plugins: [weekMarkerPlugin]
     });
   })();
 </script>
 {% endif %}
+
 
 
 {% endblock %}
