@@ -47,12 +47,8 @@
         {% endif %}
 
         {% if selected_season %}
-        <label>{{ selected_season.name }} Season Summary</label>
-        <p style="opacity:0.85; margin-top:0.25rem;">
-            {{ selected_season.start_date.strftime('%B %d, %Y') }}
-            &ndash;
-            {{ selected_season.end_date.strftime('%B %d, %Y') }}
-        </p>
+        <label>{{ selected_season.name }} Season Summary - {{ selected_season.start_date.strftime('%B %d, %Y') }} &ndash; {{ selected_season.end_date.strftime('%B %d, %Y') }}</label>
+
 
         <div class="season-top-row">
           <div class="season-top-header">
@@ -469,11 +465,40 @@
 
     const labels = weeks.map(w => w.label);
 
-    const datasets = ds.map(d => ({
-      label: d.label,
-      data: d.hours,
-      borderWidth: 1
-    }));
+const datasets = ds.map((d, datasetIndex) => ({
+  label: d.label,
+  data: d.hours,
+  borderWidth: 1,
+  borderSkipped: false,
+  borderRadius: (ctx) => {
+    const { chart, dataIndex } = ctx;
+
+    // Find the topmost visible dataset for this stack & index
+    const visibleDatasets = chart.data.datasets
+      .map((ds, i) => ({ ds, i }))
+      .filter(x => chart.isDatasetVisible(x.i));
+
+    const topDatasetIndex = visibleDatasets
+      .map(x => x.i)
+      .reverse()
+      .find(i => {
+        const v = chart.data.datasets[i].data[dataIndex];
+        return v != null && v !== 0;
+      });
+
+    // Only round the top of the topmost segment
+    if (datasetIndex === topDatasetIndex) {
+      return {
+        topLeft: 6,
+        topRight: 6,
+        bottomLeft: 0,
+        bottomRight: 0
+      };
+    }
+
+    return 0;
+  }
+}));
 
     // Helpers for computing dashboard week_offset (Monday-based)
     function toLocalMidnight(dateStrYYYYMMDD) {
