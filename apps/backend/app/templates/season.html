@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="whole-body">
+    <div class="section">
+
+    {% if not seasons or seasons|length == 0 %}
+        <p>No seasons defined yet. Create one in <a href="{{ url_for('views.admin_seasons') }}">Admin: Seasons</a>.</p>
+    {% else %}
+
+        <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
+        <label for="season_id">Season</label>
+        <select id="season_id" name="season_id" onchange="this.form.submit()">
+            {% for s in seasons %}
+            <option value="{{ s.id }}" {% if selected_season and s.id == selected_season.id %}selected{% endif %}>
+                {{ s.label if s.label is defined else s.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn">Go</button></noscript>
+        </form>
+
+        {% if seasons and seasons|length %}
+          <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
+            <input type="hidden" name="season_id" value="{{ selected_season.id if selected_season else '' }}"/>
+
+            <div style="margin-top: 0.5rem;">
+              <div style="font-weight: bold; margin-bottom: .25rem;">Compare to</div>
+
+              <div style="display:flex; flex-wrap:wrap; gap: .75rem;">
+                {% for s in seasons %}
+                  {% if selected_season and s.id != selected_season.id %}
+                    <label style="background: transparent; padding: 0; font-size: medium; font-weight: normal; color: var(--theme-content-font-color);">
+                      <input type="checkbox" name="compare_id" value="{{ s.id }}"
+                        {% if compare_ids and s.id in compare_ids %}checked{% endif %}
+                        onchange="this.form.submit()"
+                      />
+                      {{ s.name }}
+                    </label>
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <noscript><button type="submit">Apply</button></noscript>
+            </div>
+          </form>
+        {% endif %}
+
+        {% if selected_season %}
+        <label>{{ selected_season.name }} Season Summary</label>
+        <p style="opacity:0.85; margin-top:0.25rem;">
+            {{ selected_season.start_date.strftime('%B %d, %Y') }}
+            &ndash;
+            {{ selected_season.end_date.strftime('%B %d, %Y') }}
+        </p>
+
+        <div class="season-top-row">
+          <div class="season-top-header">
+            <div class="season-summary-header">
+              <label>Season Summary</label>
+            </div>
+            <div class="season-distribution-header">
+              <label>Activity Type Distribution</label>
+            </div>
+          </div>
+          <div class="season-top-content">
+            {% if summary %}
+              <div class="season-summary">
+                <div class="summary-container" style="margin-top: 1rem;">
+                  <table class="styled-table">
+                    <tbody>
+                      <tr><th>Total hours</th><td style="text-align:right;">{{ "%.1f"|format(summary.total_hours) }}</td></tr>
+                      <tr><th>Sessions</th><td style="text-align:right;">{{ summary.sessions }}</td></tr>
+                      <tr><th>Weeks</th><td style="text-align:right;">{{ summary.weeks }}</td></tr>
+                      <tr><th>Avg hours / week</th><td style="text-align:right;">{{ "%.1f"|format(summary.avg_hours_per_week) }}</td></tr>
+                    </tbody>
+                  </table>
+
+                  {% if summary.is_in_progress %}
+                    <p style="opacity:0.8;">To date through {{ summary.effective_end }}</p>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+
+            {% set items = breakdown.get("items") if breakdown else None %}
+            {% if items and items|length %}
+              <div class="season-distribution">
+                <div style="display:flex; gap: 1.5rem; align-items: flex-start;">
+                  <div style="width: 320px; height: 320px;">
+                    <canvas id="seasonDonutChart"></canvas>
+                  </div>
+
+                  <div class="summary-container" style="margin: 0;">
+                    <table class="styled-table">
+                      <thead>
+                        <tr>
+                          <th>Category</th>
+                          <th style="text-align:right;">Hours</th>
+                          <th style="text-align:right;">%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for it in items %}
+                        <tr>
+                          <td>{{ it["label"] }}</td>
+                          <td style="text-align:right;">{{ "%.1f"|format(it["hours"]) }}</td>
+                          <td style="text-align:right;">{{ "%.0f"|format(it["percent"]) }}</td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if weekly and weekly.weeks and weekly.weeks|length %}
+        <div class="season-chart-container" style="margin-top: 1.5rem;">
+        <label>Weekly Training Volume</label>
+
+        <div style="height: 260px;">
+            <canvas id="seasonWeeklyChart" style="width:100%; height:100%;"></canvas>
+        </div>
+        </div>
+        {% endif %}
+
+        {% if stacked_weekly and stacked_weekly["weeks"] and stacked_weekly["datasets"] %}
+          <div class="season-chart-container" style="margin-top: 1.5rem;">
+            <label>Weekly Training Volume by Sport</label>
+            <div style="height: 340px;">
+              <canvas id="seasonStackedWeeklyChart" style="width:100%; height:100%;"></canvas>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if compare_rows and compare_rows|length > 1 %}
+          <div class="section">
+            <label>Season Comparison</label>
+
+            {% if overlay %}
+              <div class="season-chart-container" style="margin-top: 1.5rem;">
+                <h3 style="margin-bottom: .5rem;">Cumulative training hours (season overlay)</h3>
+                <div style="height: 320px;">
+                  <canvas id="seasonOverlayChart" style="width:100%; height:100%;"></canvas>
+                </div>
+              </div>
+            {% endif %}
+
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Season</th>
+                  <th>Dates</th>
+                  <th style="text-align:right;">Hours</th>
+                  <th style="text-align:right;">Sessions</th>
+                  <th style="text-align:right;">Weeks</th>
+                  <th style="text-align:right;">Avg/wk</th>
+                  <th>Top category</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in compare_rows %}
+                  {% set is_sel = (selected_season and r.id == selected_season.id) %}
+                  <tr {% if is_sel %}style="outline: 2px solid var(--theme-color-primary);"{% endif %}>
+                    <td>
+                      <a href="{{ url_for('views.season_view', season_id=r.id) }}">{{ r.name }}</a>
+                      {% if r.is_in_progress %}
+                        <span style="font-size:0.9em; opacity:0.75;">(to date)</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ r.start_date }} → {{ r.end_date }}</td>
+                    <td style="text-align:right;">{{ "%.1f"|format(r.total_hours) }}</td>
+                    <td style="text-align:right;">{{ r.sessions }}</td>
+                    <td style="text-align:right;">{{ r.weeks }}</td>
+                    <td style="text-align:right;">{{ "%.1f"|format(r.avg_hours_per_week) }}</td>
+                    <td>{{ r.top_category or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
+        {% else %}
+        <p>No active season found. Pick one from the list (or mark one active in Admin).</p>
+        {% endif %}
+
+    {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Weekly Training Volume Bar Chart -->
+{% if weekly and weekly.weeks and weekly.weeks|length %}
+<script>
+  (function () {
+    const weekly = {{ weekly | tojson }};
+    if (!weekly || !weekly.weeks || !weekly.weeks.length) {
+      return;
+    }
+
+    const labels = weekly.weeks.map(w => w.label);
+    const data = weekly.weeks.map(w => Number(w.hours) || 0);
+
+    // ✅ Needed for click -> dashboard
+    const weekStarts = weekly.weeks.map(w => w.week_start); // "YYYY-MM-DD"
+
+    const canvas = document.getElementById("seasonWeeklyChart");
+    if (!canvas) {
+      return;
+    }
+
+    // Helpers for computing dashboard week_offset (Monday-based)
+    function toLocalMidnight(dateStrYYYYMMDD) {
+      const [y, m, d] = dateStrYYYYMMDD.split("-").map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+
+    function mondayOfWeekLocal(dt) {
+      const d = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
+      const day = d.getDay(); // 0=Sun..6=Sat
+      const diffToMonday = (day + 6) % 7; // Mon->0, Tue->1, ..., Sun->6
+      d.setDate(d.getDate() - diffToMonday);
+      return d;
+    }
+
+    function weeksBetween(a, b) {
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      return Math.round((a.getTime() - b.getTime()) / msPerWeek);
+    }
+
+    // Prevent duplicate charts on reload / navigation
+    if (canvas._chartInstance) {
+      canvas._chartInstance.destroy();
+    }
+
+    const chart = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Hours",
+          data: data,
+          borderRadius: 6,
+          backgroundColor: "rgba(54, 162, 235, 0.85)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (value) => value + " h" }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ctx.parsed.y.toFixed(1) + " hours"
+            }
+          }
+        },
+
+        // ✅ Click -> dashboard
+        onClick: function (evt, elements) {
+          if (!elements || !elements.length) return;
+
+          const idx = elements[0].index;
+          const wsStr = weekStarts[idx];
+          if (!wsStr) return;
+
+          const clickedWeekStart = toLocalMidnight(wsStr);
+          const currentWeekStart = mondayOfWeekLocal(new Date());
+          const clickedWeekMonday = mondayOfWeekLocal(clickedWeekStart);
+
+          const weekOffset = weeksBetween(clickedWeekMonday, currentWeekStart);
+
+          window.location.href = "{{ url_for('views.dashboard') }}" + "?week_offset=" + weekOffset;
+        }
+      }
+    });
+
+    canvas._chartInstance = chart;
+  })();
+</script>
+{% endif %}
+
+
+{% if items and items|length %}
+<script>
+  (function () {
+    const breakdown = {{ breakdown | tojson }};
+    const items = (breakdown && breakdown["items"]) ? breakdown["items"] : [];
+    if (!items.length) return;
+
+    const labels = items.map(x => x["label"]);
+    const data = items.map(x => Number(x["hours"]) || 0);
+
+    const canvas = document.getElementById("seasonDonutChart");
+    if (!canvas) return;
+
+    if (canvas._chartInstance) {
+      canvas._chartInstance.destroy();
+    }
+
+    canvas._chartInstance = new Chart(canvas.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                const v = ctx.parsed ?? 0;
+                const total = data.reduce((a, b) => a + b, 0) || 1;
+                const pct = (v / total) * 100;
+                return `${ctx.label}: ${v.toFixed(1)} h (${pct.toFixed(0)}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endif %}
+
+{% if overlay %}
+<script>
+  (function () {
+    const overlay = {{ overlay | tojson }};
+    const canvas = document.getElementById("seasonOverlayChart");
+    if (!overlay || !canvas) return;
+
+    const primary = overlay.primary;
+    const others = overlay.others || [];
+
+    const maxWeeks = Math.max(
+      primary.weeks.length,
+      ...others.map(s => (s.weeks || []).length)
+    );
+    const labels = Array.from({length: maxWeeks}, (_, i) => `W${i+1}`);
+
+    function seriesToData(s) {
+      const arr = new Array(maxWeeks).fill(null);
+      (s.weeks || []).forEach(w => {
+        const idx = (w.week_index || 0) - 1;
+        if (idx >= 0 && idx < maxWeeks) arr[idx] = w.cumulative_hours;
+      });
+      return arr;
+    }
+
+    const primaryLabel = overlay.primary_in_progress ? `${primary.label} (to date)` : primary.label;
+
+    const datasets = [{
+      label: primaryLabel,
+      data: seriesToData(primary),
+      borderWidth: 3,
+      tension: 0.2,
+      spanGaps: true
+    }];
+
+    others.forEach((s) => {
+      datasets.push({
+        label: s.label,
+        data: seriesToData(s),
+        borderWidth: 2,
+        tension: 0.2,
+        spanGaps: true
+      });
+    });
+
+    // Vertical marker at the selected season's current week (boundary)
+    const weekMarkerPlugin = {
+      id: 'weekMarkerPlugin',
+      afterDraw(chart) {
+        const week = overlay.primary_current_week;
+        if (!overlay.primary_in_progress || !week) return;
+
+        const xScale = chart.scales.x;
+        const yScale = chart.scales.y;
+        if (!xScale || !yScale) return;
+
+        const idx = week - 1;
+        if (idx < 0 || idx >= labels.length) return;
+
+        const x = xScale.getPixelForTick(idx);
+        const ctx = chart.ctx;
+
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#666';   // neutral marker
+        ctx.setLineDash([6, 4]);
+
+        ctx.beginPath();
+        ctx.moveTo(x, yScale.top);
+        ctx.lineTo(x, yScale.bottom);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#666';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('to date', x + 6, yScale.top + 14);
+        ctx.restore();
+      }
+    };
+
+    if (canvas._chartInstance) canvas._chartInstance.destroy();
+
+    canvas._chartInstance = new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toFixed(1)} h`
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: "Hours" } },
+          x: { title: { display: true, text: "Season week" } }
+        }
+      },
+      plugins: [weekMarkerPlugin]
+    });
+  })();
+</script>
+{% endif %}
+
+
+{% if stacked_weekly and stacked_weekly["weeks"] and stacked_weekly["datasets"] %}
+<script>
+  (function () {
+    const stacked = {{ stacked_weekly | tojson }};
+    const canvas = document.getElementById("seasonStackedWeeklyChart");
+    if (!stacked || !canvas) return;
+
+    const weeks = stacked["weeks"] || [];
+    const ds = stacked["datasets"] || [];
+
+    const labels = weeks.map(w => w.label);
+
+    const datasets = ds.map(d => ({
+      label: d.label,
+      data: d.hours,
+      borderWidth: 1
+    }));
+
+    // Helpers for computing dashboard week_offset (Monday-based)
+    function toLocalMidnight(dateStrYYYYMMDD) {
+      // 'YYYY-MM-DD' interpreted as local date
+      const [y, m, d] = dateStrYYYYMMDD.split("-").map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+
+    function mondayOfWeekLocal(dt) {
+      const d = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
+      const day = d.getDay(); // 0=Sun..6=Sat
+      const diffToMonday = (day + 6) % 7; // Mon->0, Tue->1, ..., Sun->6
+      d.setDate(d.getDate() - diffToMonday);
+      return d;
+    }
+
+    function weeksBetween(a, b) {
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      return Math.round((a.getTime() - b.getTime()) / msPerWeek);
+    }
+
+    const weekStarts = weeks.map(w => w.week_start); // YYYY-MM-DD
+
+    if (canvas._chartInstance) canvas._chartInstance.destroy();
+
+    canvas._chartInstance = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: "index", intersect: true },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: "Hours" } }
+        },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toFixed(1)} h`
+            }
+          }
+        },
+        onClick: function (evt, elements) {
+          if (!elements || !elements.length) return;
+
+          // elements[0].index is the x-index (week index)
+          const idx = elements[0].index;
+          const wsStr = weekStarts[idx];
+          if (!wsStr) return;
+
+          const clickedWeekStart = toLocalMidnight(wsStr);
+          const currentWeekStart = mondayOfWeekLocal(new Date());
+          const clickedWeekMonday = mondayOfWeekLocal(clickedWeekStart);
+
+          const weekOffset = weeksBetween(clickedWeekMonday, currentWeekStart);
+
+          // Navigate to your existing dashboard route
+          window.location.href = "{{ url_for('views.dashboard') }}" + "?week_offset=" + weekOffset;
+        }
+      }
+    });
+  })();
+</script>
+{% endif %}
+
+
+{% endblock %}

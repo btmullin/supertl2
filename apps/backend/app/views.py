@@ -33,17 +33,42 @@ from app.services.analytics import (
     get_local_date_for_activity,
     get_primary_training_log,
 )
+from app.services.seasons import (
+    get_season_summary,
+    get_season_weekly_series,
+    get_season_traininglog_category_breakdown,
+    get_season_comparison_rows,
+    get_season_cumulative_series,
+    get_season_weekly_stacked_by_category,
+)
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .forms.ActivityQueryForm import ActivityQueryFilterForm
-from .models import StravaActivity, WorkoutType, TrainingLogData, Category, Activity, SportTracksActivity
+from .forms.season_forms import SeasonCreateForm
+from .models import StravaActivity, WorkoutType, TrainingLogData, Category, Activity, SportTracksActivity, Season
 from .db.base import sqla_db
 from .filters import category_path_filter
 
 PER_PAGE = 25
 
 views = Blueprint("views", __name__)
+
+from datetime import date
+from zoneinfo import ZoneInfo
+
+def _today_local_date() -> date:
+    return datetime.now(ZoneInfo("America/Chicago")).date()
+
+def _week_start(d: date, week_start: int = 0) -> date:
+    delta = (d.weekday() - week_start) % 7
+    return d - timedelta(days=delta)
+
+def _week_index(season_start: date, day: date, week_start: int = 0) -> int:
+    # Week index is 1-based, aligned to your weekly bucketing (Monday start)
+    start_ws = _week_start(season_start, week_start)
+    day_ws = _week_start(day, week_start)
+    return int(((day_ws - start_ws).days // 7) + 1)
 
 def get_or_create_training_log(activity_id: str) -> TrainingLogData:
     """
@@ -499,6 +524,110 @@ def import_strava():
 
     flash(f"Imported new activities.")
     return redirect(url_for("views.activitylist"))
+
+@views.route("/admin/seasons", methods=["GET", "POST"])
+def admin_seasons():
+    form = SeasonCreateForm()
+
+    if form.validate_on_submit():
+        season = Season(
+            name=form.name.data.strip(),
+            start_date=form.start_date.data,
+            end_date=form.end_date.data,
+            is_active=bool(form.is_active.data),
+        )
+        sqla_db.session.add(season)
+        sqla_db.session.commit()
+        flash("Season created.", "success")
+        return redirect(url_for("views.admin_seasons"))
+
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
+    return render_template("admin_seasons.html", form=form, seasons=seasons)
+
+def _get_default_season_id():
+    s = (Season.query
+         .filter(Season.is_active == True)
+         .order_by(Season.start_date.desc())
+         .first())
+    return s.id if s else None
+
+
+def _as_datetime_start(d):
+    return datetime(d.year, d.month, d.day, 0, 0, 0)
+
+def _as_datetime_end_exclusive(d):
+    nd = d + timedelta(days=1)
+    return datetime(nd.year, nd.month, nd.day, 0, 0, 0)
+
+@views.route("/seasons")
+def season_view():
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
+
+    season_id = request.args.get("season_id", type=int) or _get_default_season_id()
+    selected = Season.query.get(season_id) if season_id else None
+
+    summary = None
+    weekly = None
+    breakdown = None
+
+    compare_ids = request.args.getlist("compare_id", type=int)
+    compare_ids_param = request.args.get("compare_id", "").strip()
+    if compare_ids_param:
+        for part in compare_ids_param.split(","):
+            part = part.strip()
+            if part.isdigit():
+                compare_ids.append(int(part))
+    compare_ids = sorted(set(compare_ids))
+    if selected:
+        compare_ids = [cid for cid in compare_ids if cid != selected.id]
+    
+    if selected:
+        summary = get_season_summary(selected.start_date, selected.end_date, use_local=True)
+        weekly = get_season_weekly_series(selected.start_date, selected.end_date, use_local=True)
+        stacked_weekly = get_season_weekly_stacked_by_category(
+            selected.start_date,
+            selected.end_date,
+            use_local=True,
+            rollup_depth=0
+        )
+        start_dt = _as_datetime_start(selected.start_date)
+        end_dt_excl = _as_datetime_end_exclusive(selected.end_date)
+        breakdown = get_season_traininglog_category_breakdown(start_dt, end_dt_excl, use_local=True, rollup_depth=0, min_percent=2.0)
+
+    compare_rows = get_season_comparison_rows(seasons)
+
+    overlay = None
+    if selected:
+        primary = get_season_cumulative_series(selected, use_local=True)
+
+        # If in progress, mark "to date" and add a week marker
+        today = _today_local_date()
+        in_progress = today < selected.end_date
+        current_week_idx = _week_index(selected.start_date, min(today, selected.end_date), week_start=0) if in_progress else None
+
+        compare_seasons = [s for s in seasons if s.id in compare_ids and s.id != selected.id]
+        others = [get_season_cumulative_series(s, use_local=True) for s in compare_seasons]
+
+        overlay = {
+            "primary": primary,
+            "others": others,
+            "primary_in_progress": in_progress,
+            "primary_current_week": current_week_idx,  # 1-based
+        }
+
+    return render_template(
+        "season.html",
+        seasons=seasons,
+        selected_season=selected,
+        season_id=season_id,
+        summary=summary,
+        weekly=weekly,
+        breakdown=breakdown,
+        compare_rows=compare_rows,
+        compare_ids=compare_ids,
+        overlay=overlay,
+        stacked_weekly=stacked_weekly,
+    )
 
 @views.route("/activitylist")
 def activitylist():

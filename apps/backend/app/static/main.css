@@ -521,6 +521,12 @@ button:hover {
   height: 100% !important;
 }
 
+.season-chart-container {
+  width: 100%;
+  max-width: none;   /* overrides any inherited max-width behavior */
+  margin: 1rem 0;    /* not centered/narrow */
+}
+
 /* Activity list filter bar */
 .activity-filter-bar {
   display: flex;
@@ -557,4 +563,24 @@ button:hover {
 /* Keep text visually centered */
 .filter-checkbox span {
   line-height: 1;
+}
+
+.season-top-header {
+  display: flex;
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.season-summary-header {
+  flex: 0 0 280px;
+}
+
+.season-distribution-header {
+  flex: 1 1 600px;
+}
+
+.season-top-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
 }
