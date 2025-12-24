@@ -80,28 +80,21 @@
 
     <!-- Right: summary tables + weekly bar chart -->
     <div class="dashboard-side">
-      <table class="summary-table week-summary-table">
-        <thead>
-          <tr>
-            <th>Weekly Summary</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td># of workouts</td>
-            <td>{{ week_summary.count }}</td>
-          </tr>
-          <tr>
-            <td>Total time</td>
-            <td class="col-time">{{ week_summary.total_moving_s | format_duration }}</td>
-          </tr>
-          <tr>
-            <td>Total distance</td>
-            <td class="col-distance">{{ week_summary.total_distance | km }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="dashboard-kpis">
+        <div class="kpi">
+          <div class="kpi-value">{{ week_summary.count }}</div>
+          <div class="kpi-label">Activities</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value">{{ week_summary.total_moving_s | format_duration }}</div>
+          <div class="kpi-label">Total Time</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value">{{ week_summary.total_distance | km }}</div>
+          <div class="kpi-label">Total Distance (km)</div>
+        </div>
+      </div>
+      <p></p>
 
       <table class="summary-table week-summary-table">
         <thead>
@@ -127,7 +120,7 @@
         </tbody>
       </table>
 
-      <h4>Weekly Volume (hours)</h4>
+      <label>Weekly Volume (hours)</label>
       <div class="weekly-chart-container">
         <canvas id="weeklyTimeChart"></canvas>
       </div>
