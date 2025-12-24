@@ -51,33 +51,31 @@
 
 
         <div class="season-top-row">
-          <div class="season-top-header">
             <div class="season-summary-header">
               <label>Season Summary</label>
             </div>
             <div class="season-distribution-header">
               <label>Activity Type Distribution</label>
             </div>
-          </div>
-          <div class="season-top-content">
-            {% if summary %}
-              <div class="season-summary">
-                <div class="summary-container" style="margin-top: 1rem;">
-                  <table class="styled-table">
-                    <tbody>
-                      <tr><th>Total hours</th><td style="text-align:right;">{{ "%.1f"|format(summary.total_hours) }}</td></tr>
-                      <tr><th>Sessions</th><td style="text-align:right;">{{ summary.sessions }}</td></tr>
-                      <tr><th>Weeks</th><td style="text-align:right;">{{ summary.weeks }}</td></tr>
-                      <tr><th>Avg hours / week</th><td style="text-align:right;">{{ "%.1f"|format(summary.avg_hours_per_week) }}</td></tr>
-                    </tbody>
-                  </table>
 
-                  {% if summary.is_in_progress %}
-                    <p style="opacity:0.8;">To date through {{ summary.effective_end }}</p>
-                  {% endif %}
-                </div>
+            <div class="season-summary-kpis">
+              <div class="kpi">
+                <div class="kpi-value">{{ summary.total_hours | round(1) }}</div>
+                <div class="kpi-label">Total Hours</div>
               </div>
-            {% endif %}
+              <div class="kpi">
+                <div class="kpi-value">{{ summary.sessions }}</div>
+                <div class="kpi-label">Sessions</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-value">{{ summary.weeks }}</div>
+                <div class="kpi-label">Weeks</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-value">{{ summary.avg_hours_per_week | round(1) }}</div>
+                <div class="kpi-label">Avg Hours / Week</div>
+              </div>
+            </div>
 
             {% set items = breakdown.get("items") if breakdown else None %}
             {% if items and items|length %}
