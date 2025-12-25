@@ -1,0 +1,184 @@
+/* 20_layout.css - major page layout primitives and top-level containers */
+
+.page-layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: min-content min-content auto min-content;
+  grid-gap: 5px;
+  padding: 5px;
+}
+
+.title-bar {
+  grid-column: 1/-1;
+  grid-row: 1/2;
+  background-color: white;
+  border: 1px solid var(--theme-color-primary);
+  box-shadow: 0 2px 4px rgba(0, 188, 212, 0.2);
+  border-radius: var(--theme-corner-radius);
+  padding: 0.5em 1em;
+  display: flex;
+  align-items: center;
+  color: var(--theme-content-font-color);
+}
+
+.title-bar h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: var(--theme-color-accent);
+}
+
+.menu-bar {
+  grid-column: 1/-1;
+  grid-row: 2/3;
+  background: white;
+  border: 1px solid var(--theme-color-primary);
+  box-shadow: 0 1px 3px rgba(0, 188, 212, 0.1);
+  border-radius: var(--theme-corner-radius);
+  padding: 0.5em 1em;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 1em;
+  border: none;
+  padding: 0.5em 0;
+  background: transparent;
+}
+
+.nav-tabs .nav-link {
+  font-size: 1em;
+  color: var(--theme-color-accent) !important;
+  background-color: transparent;
+  border: none;
+  padding: 0.4em 0.8em;
+  border-radius: var(--theme-corner-radius);
+  transition: background-color 0.2s, color 0.2s;
+  position: relative;
+  text-decoration: none;
+}
+
+.nav-link.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.nav-link:hover {
+  background-color: var(--theme-color-primary-light);
+}
+
+.nav-tabs .nav-link.active {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color) !important;
+  border-radius: var(--theme-corner-radius);
+}
+
+.left-body {
+  grid-column: 1/3;
+  grid-row: 3/4;
+  border-style: solid;
+  border-radius: var(--theme-corner-radius);
+  border-color: var(--theme-color-primary);
+}
+
+.left-body h2 {
+  background-color: var(--theme-color-primary);
+}
+
+.left-body * {
+  padding-left: 10px;
+}
+
+.right-body {
+  grid-column: -3/-1;
+  grid-row: 3/4;
+  border-style: solid;
+  border-radius: var(--theme-corner-radius);
+  border-color: var(--theme-color-primary);
+}
+
+.whole-body {
+  grid-column: 1/-1;
+  grid-row: 3/4;
+  border-style: solid;
+  border-radius: var(--theme-corner-radius);
+  border-color: var(--theme-color-primary);
+  padding: 5px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section {
+  border-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  padding: 0px 10px;
+
+  /* FIX: previously var(--content-font-color) which isn't defined */
+  color: var(--theme-content-font-color);
+
+  margin-bottom: 0em;
+}
+
+.section h2 {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color);
+  padding: 0.5em 1em;
+  border-radius: var(--theme-corner-radius);
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+.footer {
+  grid-column: 1/-1;
+  grid-row: -2/-1;
+  text-align: center;
+  background-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+}
+
+.footer p {
+  margin: 0em;
+}
+
+/* Week navigation bar (dashboard/calendar/week views) */
+.week-nav {
+  background-color: white;
+  color: var(--theme-content-font-color);
+  padding: 0.75em 1em;
+  margin-top: 1em;
+  border: 1px solid var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  display: flex;
+  align-items: center;
+  gap: 1.5em;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.week-nav a {
+  color: var(--theme-color-accent);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.week-nav a:hover {
+  text-decoration: underline;
+}
+
+/* Pagination */
+.pagination {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+  font-size: 1.2em;
+}
+
+.pagination a {
+  text-decoration: none;
+  color: var(--theme-color-accent);
+  font-weight: bold;
+}

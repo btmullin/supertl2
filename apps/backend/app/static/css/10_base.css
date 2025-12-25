@@ -1,0 +1,89 @@
+/* 10_base.css - global element defaults and helper text sizing */
+
+html,
+body {
+  height: 100%;
+  background-color: var(--theme-background-color);
+  color: var(--theme-content-font-color);
+}
+
+/* Utility-ish text sizing (used in older templates) */
+.large-text {
+  font-size: 25px;
+  color: var(--theme-font-color);
+}
+
+.medium-text {
+  font-size: 20px;
+  color: var(--theme-font-color);
+}
+
+.small-text {
+  font-size: 15px;
+  color: var(--theme-font-color);
+}
+
+/* Form field defaults */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  box-sizing: border-box;
+  font-size: medium;
+}
+
+/* NOTE: You currently style all labels as “section pills”.
+   Kept as-is to preserve output. */
+label {
+  color: var(--theme-font-color);
+  display: block;
+  margin-bottom: 5px;
+  font-size: x-large;
+  font-weight: bold;
+  background-color: var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+
+select,
+input[type="checkbox"] {
+  font-size: medium;
+  padding: 10px;
+  margin: 5px 0 15px 0;
+  border: 1px solid var(--theme-color-primary);
+  border-radius: var(--theme-corner-radius);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Improve spacing for form rows */
+form .form-group {
+  margin-bottom: 1.5em;
+}
+
+/* Fix label spacing in forms */
+form label {
+  margin-top: 1em;
+}
+
+/* Make checkbox more visible */
+input[type="checkbox"] {
+  width: auto;
+  height: 20px;
+  transform: scale(1.3);
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+/* Group checkbox with label horizontally */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5em;
+}

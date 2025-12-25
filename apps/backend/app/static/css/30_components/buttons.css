@@ -1,0 +1,22 @@
+/* 30_components/buttons.css - buttons kept consistent */
+
+/* Smaller, modern-looking buttons (kept as your “final” override) */
+input[type="submit"],
+input[type="cancel"],
+button {
+  background-color: var(--theme-color-accent);
+  color: var(--theme-font-color);
+  padding: 8px 16px;
+  margin-right: 10px;
+  font-size: medium;
+  border: none;
+  border-radius: var(--theme-corner-radius);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+input[type="submit"]:hover,
+input[type="cancel"]:hover,
+button:hover {
+  background-color: var(--theme-color-primary);
+}

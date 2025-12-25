@@ -1,0 +1,156 @@
+/* 30_components/tables.css - table styles */
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: var(--theme-corner-radius);
+  overflow: hidden;
+  font-size: 18px;
+  background-color: white;
+  color: black;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.styled-table thead {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color);
+}
+
+.styled-table th,
+.styled-table td {
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.styled-table tbody tr {
+  border-bottom: 1px solid #dddddd;
+}
+
+.styled-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.styled-table tbody tr:hover {
+  background-color: var(--theme-color-accent);
+  color: var(--theme-font-color);
+}
+
+.styled-table th,
+.styled-table td {
+  border-right: 1px solid #ddd;
+}
+
+/* Column sizing helpers */
+.col-date {
+  width: 150px;
+}
+
+.col-date-time {
+  width: 220px;
+}
+
+.col-sport {
+  width: 300px;
+}
+
+/* .col-name     { width: 400px; } */
+.col-distance {
+  width: 150px;
+}
+
+.col-time {
+  width: 150px;
+}
+
+.col-extra {
+  width: 100px;
+}
+
+.col-training {
+  width: 100px;
+}
+
+.styled-table th.col-time,
+.styled-table th.col-distance,
+.styled-table td.col-time,
+.styled-table td.col-distance {
+  text-align: right;
+}
+
+.styled-table td.col-date {
+  font-weight: 500;
+}
+
+.styled-table td.col-distance-summary,
+.styled-table td.col-time-summary {
+  font-style: italic;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Summary row styling */
+.summary-row-border-header {
+  border-top: 5px double gray;
+}
+
+/* Summary table (dashboard/season summary block) */
+.summary-container {
+  max-width: 700px;
+  margin: 1rem auto;
+}
+
+.summary-table td,
+.summary-table th {
+  padding: 0.4rem 0.8rem;
+}
+
+.summary-table .col-name {
+  max-width: 30rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-table .col-distance,
+.summary-table .col-time {
+  width: 8rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Remove the double top border on this specific table */
+.summary-table {
+  border-top: none !important;
+  font-size: 18px; /* match .styled-table font-size */
+}
+
+.summary-table .summary-row-border-header,
+.summary-table thead tr.summary-row-border-header th {
+  border-top: none !important;
+}
+
+/* Weekly summary tables on the dashboard side panel */
+.week-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  background-color: #ffffff;
+  border-radius: var(--theme-corner-radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* no explicit font-size so it inherits the same as the main dashboard */
+}
+
+.week-summary-table thead {
+  background-color: var(--theme-color-primary);
+  color: var(--theme-font-color);
+}
+
+.week-summary-table th,
+.week-summary-table td {
+  padding: 0.35rem 0.6rem;
+}
+
+.week-summary-table tbody tr:nth-child(even) {
+  background-color: #f7fafc;
+}
