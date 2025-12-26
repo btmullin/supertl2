@@ -1,0 +1,51 @@
+/* 30_components/kpis.css - KPI tiles/cards */
+
+.calendar-year-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.calendar-month-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.season-summary-kpis {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.kpi {
+  padding: 0.75rem 0.9rem;
+  background: var(--theme-background-color-light);
+  border: 1px solid var(--theme-color-accent-light);
+  border-radius: var(--theme-corner-radius);
+  align-items: center;
+  text-align: center;
+}
+
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--theme-color-accent);
+}
+
+.kpi-label {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin-top: 0.25rem;
+  color: var(--theme-color-accent);
+}

@@ -11,11 +11,11 @@
 
 <div class="whole-body">
   <div class="section">
-    <div style="display: flex; flex-direction: row; gap: 2em; flex-wrap: wrap;">
+    <div class="flex-row flex-wrap gap-8">
 
       <!-- Left: Strava Info -->
       <!-- Left: Canonical + Source Info -->
-      <div style="flex: 1; min-width: 300px;">
+      <div class="flex-1 minw-300">
 
         <h3>Canonical Activity Info</h3>
         <p>
@@ -107,7 +107,7 @@
         {% if summary_polyline %}
         <p></p>
         <h4>Route (Strava)</h4>
-        <div id="map" style="height: 500px; margin-bottom: 1em; border-radius: 10px;"></div>
+        <div id="map" class="map-lg mb-2"></div>
 
         <script>
           document.addEventListener("DOMContentLoaded", function () {
@@ -163,7 +163,7 @@
 
 
       <!-- Right: Editable Training Log Fields -->
-      <div style="flex: 1; min-width: 300px;">
+      <div class="flex-1 flex-fixed-800">
         <h3>Edit Training Log Data</h3>
         <form method="POST">
           {{ form.hidden_tag() }}
@@ -198,16 +198,16 @@
             {{ form.cancel() }}
           </div>
           <hr>
-          <div>
-            {{ form.general_trail() }}
-            {{ form.general_mountain_bike() }}
-            {{ form.general_gravel_bike() }}
-            {{ form.general_virtual_bike() }}
-            {{ form.strength() }}
-            {{ form.l3_skate_roller() }}
-            {{ form.l3_classic_roller() }}
-            {{ form.general_skate_ski() }}
-            {{ form.general_classic_ski() }}
+          <div class="quick-actions">
+            {{ form.general_trail(class_="btn") }}
+            {{ form.general_mountain_bike(class_="btn") }}
+            {{ form.general_gravel_bike(class_="btn") }}
+            {{ form.general_virtual_bike(class_="btn") }}
+            {{ form.strength(class_="btn") }}
+            {{ form.l3_skate_roller(class_="btn") }}
+            {{ form.l3_classic_roller(class_="btn") }}
+            {{ form.general_skate_ski(class_="btn") }}
+            {{ form.general_classic_ski(class_="btn") }}
           </div>
         </form>
       </div>

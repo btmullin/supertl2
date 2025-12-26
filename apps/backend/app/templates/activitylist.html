@@ -1,7 +1,7 @@
 {% extends 'base.html' %} {% block content %}
 <div class="whole-body">
   <div class="section">
-    <form method="get" style="margin-bottom: 0.75rem;">
+    <form method="get" class="mb-3">
       <label class="filter-checkbox">
         <input type="checkbox"
               name="missing_training_log"
@@ -9,7 +9,7 @@
               {% if missing_training_log %}checked{% endif %}>
         <span>Only show activities missing a training log</span>
       </label>
-      <input type="submit" value="Apply" style="margin-left: 0.6rem;">
+      <button type="submit" class="btn ml-2">Apply</button>
     </form>
     <table class="styled-table">
       <thead>
@@ -25,7 +25,7 @@
         </tr>
       </thead>
       {% for activity, training_log in activities %}
-        <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
+        <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" class="row-clickable">
           <td class="col-date-time">{{ activity.start_time_utc | localtime | pretty_datetime }}</td>
           <td class="col-sport">{{ activity.sport }}</td>
           <td class="col-name">{{ activity.name }}</td>

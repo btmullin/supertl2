@@ -38,9 +38,9 @@
       </div>
 
 
-      <div style="margin-top: .5rem;">
+      <div class="mt-1">
         {{ form.submit(class_="btn") }}
-        <a class="btn btn-secondary" href="{{ url_for('views.activity_query') }}">Reset</a>
+        <a class="btn btn--secondary" href="{{ url_for('views.activity_query') }}">Reset</a>
       </div>
     </form>
   </div>
@@ -75,7 +75,7 @@
         </tr>
       </thead>
       {% for activity in activities %}
-      <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
+      <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" class="row-clickable">
         <td class="col-date-time">
           {{ activity.start_time_utc | localtime | pretty_datetime }}
         </td>
@@ -114,8 +114,7 @@
       {% for cat, cat_summary in category_summary.items() %}
       <tr>
         <td class="col-name">
-          <span class="category-label"
-                style="margin-left: {{ (category_depths.get(cat, 0) if category_depths else 0) * 1.5 }}rem;">
+          <span class="category-label indent" style="--indent-level: {{ (category_depths.get(cat, 0) if category_depths else 0) }};">
             {{ cat | category_path }}
           </span>
         </td>

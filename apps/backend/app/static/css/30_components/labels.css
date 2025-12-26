@@ -1,0 +1,25 @@
+/* 30_components/labels.css - decorative labels (opt-in) */
+
+/* Full-width “section header bar” (what you were really doing with label) */
+.label-bar {
+  display: block;
+  width: 100%;
+
+  background: var(--theme-color-primary);
+  color: var(--theme-font-color);
+
+  border-radius: var(--theme-corner-radius);
+  padding: 0.5rem 0.75rem;
+
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.2;
+
+  /* avoids the “tight to last letter” look */
+  box-sizing: border-box;
+}
+
+/* Optional: align bar title text / spacing variants */
+.label-bar--center { text-align: center; }
+.label-bar--tight { padding: 0.4rem 0.6rem; }
+.label-bar--roomy { padding: 0.6rem 1rem; }

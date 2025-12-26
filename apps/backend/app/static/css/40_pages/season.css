@@ -1,0 +1,33 @@
+/* 40_pages/season.css - season page specific layout */
+
+.season-top-row {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 2rem;
+  align-self: start;
+}
+
+.season-summary-header,
+.season-distribution-header {
+  margin-bottom: 0.25rem;
+}
+
+.season-summary-header label,
+.season-distribution-header label {
+  display: block;
+  font-weight: 600;
+}
+
+.season-summary-header {
+  flex: 0 0 280px;
+}
+
+.season-distribution-header {
+  flex: 1 1 600px;
+}
+
+.season-top-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}

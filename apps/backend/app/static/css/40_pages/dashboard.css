@@ -1,0 +1,16 @@
+/* Dashboard layout: main table + side summary */
+.dashboard-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.dashboard-main {
+  flex: 2;
+  min-width: 0;
+}
+
+.dashboard-side {
+  flex: 1;
+  min-width: 260px;
+}

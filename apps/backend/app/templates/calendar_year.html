@@ -68,7 +68,7 @@
             {% if ns.max_h > 0 %}
               {% set pct = (d.hours / ns.max_h) * 100 %}
             {% endif %}
-            <div class="spark-bar" style="height: {{ pct }}%"></div>
+            <div class="spark-bar" style="--bar-h: {{ pct }}%"></div>
           {% endfor %}
         </div>
 

@@ -14,8 +14,8 @@
                 {{ form.parent_id.label }}<br>
                 {{ form.parent_id(class="form-control") }}
             </div>
-            {{ form.submit() }}
-            {{ form.cancel(formnovalidate=True) }}
+            {{ form.submit(class_="btn") }}
+            {{ form.cancel(formnovalidate=True, class_="btn") }}
         </form>
     </div>
 </div>

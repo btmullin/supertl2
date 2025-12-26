@@ -1,0 +1,27 @@
+/* 30_components/filters.css - filters and date-range layout */
+
+.filters {
+  width: 100%;
+}
+
+/* Side-by-side date fields; leftover space flexes */
+.filters .date-range.left-fill {
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;
+  flex-wrap: nowrap;
+}
+
+.filters .date-range.left-fill .field {
+  flex: 0 0 auto;
+}
+
+.filters .date-range.left-fill .flex-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filters .date-range.left-fill label {
+  display: block;
+  margin-bottom: 0.25rem;
+}

@@ -1,0 +1,29 @@
+/* 30_components/charts.css - chart sizing wrappers */
+
+#streamChart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* Make the chart fill the side panel nicely */
+.weekly-chart-container {
+  width: 100%;
+  height: 400px;
+}
+
+.weekly-chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.season-chart-container {
+  width: 100%;
+  max-width: none;
+  margin: 1rem 0;
+}
+
+/* allow spark bars to set height via CSS variable */
+.spark-bar {
+  height: var(--bar-h, 0%);
+}
