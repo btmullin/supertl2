@@ -37,18 +37,16 @@ textarea {
   font-size: medium;
 }
 
-/* NOTE: You currently style all labels as “section pills”.
-   Kept as-is to preserve output. */
+/* Base label styling (form-friendly) */
 label {
-  color: var(--theme-font-color);
   display: block;
-  margin-bottom: 5px;
-  font-size: x-large;
-  font-weight: bold;
-  background-color: var(--theme-color-primary);
-  border-radius: var(--theme-corner-radius);
-  padding-left: 0.5em;
-  padding-right: 0.5em;
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--theme-content-font-color);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
 select,

@@ -52,10 +52,10 @@
 
         <div class="season-top-row">
             <div class="season-summary-header">
-              <label>Season Summary</label>
+              <div class="label-bar">Season Summary</div>
             </div>
             <div class="season-distribution-header">
-              <label>Activity Type Distribution</label>
+              <div class="label-bar">Activity Type Distribution</div>
             </div>
 
             <div class="season-summary-kpis">
@@ -113,7 +113,7 @@
 
         {% if weekly and weekly.weeks and weekly.weeks|length %}
         <div class="season-chart-container" style="margin-top: 1.5rem;">
-        <label>Weekly Training Volume</label>
+        <div class="label-bar">Weekly Training Volume</div>
 
         <div style="height: 260px;">
             <canvas id="seasonWeeklyChart" style="width:100%; height:100%;"></canvas>
@@ -123,7 +123,7 @@
 
         {% if stacked_weekly and stacked_weekly["weeks"] and stacked_weekly["datasets"] %}
           <div class="season-chart-container" style="margin-top: 1.5rem;">
-            <label>Weekly Training Volume by Sport</label>
+            <div class="label-bar">Weekly Training Volume by Sport</div>
             <div style="height: 340px;">
               <canvas id="seasonStackedWeeklyChart" style="width:100%; height:100%;"></canvas>
             </div>
@@ -132,7 +132,7 @@
 
         {% if compare_rows and compare_rows|length > 1 %}
           <div class="section">
-            <label>Season Comparison</label>
+            <div class="label-bar">Season Comparison</div>
 
             {% if overlay %}
               <div class="season-chart-container" style="margin-top: 1.5rem;">
