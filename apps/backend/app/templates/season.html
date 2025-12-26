@@ -4,33 +4,33 @@
 <div class="whole-body">
     <div class="section">
 
-    {% if not seasons or seasons|length == 0 %}
+      {% if not seasons or seasons|length == 0 %}
         <p>No seasons defined yet. Create one in <a href="{{ url_for('views.admin_seasons') }}">Admin: Seasons</a>.</p>
-    {% else %}
+      {% else %}
 
-        <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
-        <label for="season_id">Season</label>
-        <select id="season_id" name="season_id" onchange="this.form.submit()">
-            {% for s in seasons %}
-            <option value="{{ s.id }}" {% if selected_season and s.id == selected_season.id %}selected{% endif %}>
-                {{ s.label if s.label is defined else s.name }}
-            </option>
-            {% endfor %}
-        </select>
-        <noscript><button type="submit" class="btn">Go</button></noscript>
+        <form method="get" action="{{ url_for('views.season_view') }}" class="my-2">
+          <label for="season_id">Season</label>
+          <select id="season_id" name="season_id" onchange="this.form.submit()">
+              {% for s in seasons %}
+              <option value="{{ s.id }}" {% if selected_season and s.id == selected_season.id %}selected{% endif %}>
+                  {{ s.label if s.label is defined else s.name }}
+              </option>
+              {% endfor %}
+          </select>
+          <noscript><button type="submit" class="btn">Go</button></noscript>
         </form>
 
         {% if seasons and seasons|length %}
-          <form method="get" action="{{ url_for('views.season_view') }}" style="margin: 1rem 0;">
+          <form method="get" action="{{ url_for('views.season_view') }}" class="my-2">
             <input type="hidden" name="season_id" value="{{ selected_season.id if selected_season else '' }}"/>
 
-            <div style="margin-top: 0.5rem;">
-              <div style="font-weight: bold; margin-bottom: .25rem;">Compare to</div>
+            <div class="mt-1">
+              <div class="fw-bold mb-1">Compare to</div>
 
               <div style="display:flex; flex-wrap:wrap; gap: .75rem;">
                 {% for s in seasons %}
                   {% if selected_season and s.id != selected_season.id %}
-                    <label style="background: transparent; padding: 0; font-size: medium; font-weight: normal; color: var(--theme-content-font-color);">
+                    <label class="check-inline">
                       <input type="checkbox" name="compare_id" value="{{ s.id }}"
                         {% if compare_ids and s.id in compare_ids %}checked{% endif %}
                         onchange="this.form.submit()"
@@ -41,16 +41,15 @@
                 {% endfor %}
               </div>
 
-              <noscript><button type="submit">Apply</button></noscript>
+              <noscript><button type="submit" class="btn">Apply</button></noscript>
             </div>
           </form>
         {% endif %}
 
         {% if selected_season %}
-        <label>{{ selected_season.name }} Season Summary - {{ selected_season.start_date.strftime('%B %d, %Y') }} &ndash; {{ selected_season.end_date.strftime('%B %d, %Y') }}</label>
+          <label>{{ selected_season.name }} Season Summary - {{ selected_season.start_date.strftime('%B %d, %Y') }} &ndash; {{ selected_season.end_date.strftime('%B %d, %Y') }}</label>
 
-
-        <div class="season-top-row">
+          <div class="season-top-row">
             <div class="season-summary-header">
               <div class="label-bar">Season Summary</div>
             </div>
@@ -81,108 +80,106 @@
             {% if items and items|length %}
               <div class="season-distribution">
                 <div style="display:flex; gap: 1.5rem; align-items: flex-start;">
-                  <div style="width: 320px; height: 320px;">
+                  <div class="wh-400">
                     <canvas id="seasonDonutChart"></canvas>
                   </div>
+                </div>
 
-                  <div class="summary-container" style="margin: 0;">
-                    <table class="styled-table">
-                      <thead>
-                        <tr>
-                          <th>Category</th>
-                          <th style="text-align:right;">Hours</th>
-                          <th style="text-align:right;">%</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for it in items %}
-                        <tr>
-                          <td>{{ it["label"] }}</td>
-                          <td style="text-align:right;">{{ "%.1f"|format(it["hours"]) }}</td>
-                          <td style="text-align:right;">{{ "%.0f"|format(it["percent"]) }}</td>
-                        </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
+                <div class="summary-container m-0">
+                  <table class="styled-table">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th class="text-right">Hours</th>
+                        <th class="text-right">%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for it in items %}
+                      <tr>
+                        <td>{{ it["label"] }}</td>
+                        <td class="text-right">{{ "%.1f"|format(it["hours"]) }}</td>
+                        <td class="text-right">{{ "%.0f"|format(it["percent"]) }}</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          {% if weekly and weekly.weeks and weekly.weeks|length %}
+            <div class="season-chart-container mt-3">
+              <div class="label-bar">Weekly Training Volume</div>
+              <div class="h-260">
+                <canvas id="seasonWeeklyChart" class="wh-100"></canvas>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if stacked_weekly and stacked_weekly["weeks"] and stacked_weekly["datasets"] %}
+            <div class="season-chart-container mt-3">
+              <div class="label-bar">Weekly Training Volume by Sport</div>
+              <div class="h-340">
+                <canvas id="seasonStackedWeeklyChart" class="wh-100"></canvas>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if compare_rows and compare_rows|length > 1 %}
+            <div class="section">
+              <div class="label-bar">Season Comparison</div>
+
+              {% if overlay %}
+                <div class="season-chart-container mt-3">
+                  <h3 class="mb-1">Cumulative training hours (season overlay)</h3>
+                  <div class="h-320">
+                    <canvas id="seasonOverlayChart" class="wh-100"></canvas>
                   </div>
                 </div>
-              </div>
-            {% endif %}
-          </div>
-        </div>
+              {% endif %}
 
-        {% if weekly and weekly.weeks and weekly.weeks|length %}
-        <div class="season-chart-container" style="margin-top: 1.5rem;">
-        <div class="label-bar">Weekly Training Volume</div>
-
-        <div style="height: 260px;">
-            <canvas id="seasonWeeklyChart" style="width:100%; height:100%;"></canvas>
-        </div>
-        </div>
-        {% endif %}
-
-        {% if stacked_weekly and stacked_weekly["weeks"] and stacked_weekly["datasets"] %}
-          <div class="season-chart-container" style="margin-top: 1.5rem;">
-            <div class="label-bar">Weekly Training Volume by Sport</div>
-            <div style="height: 340px;">
-              <canvas id="seasonStackedWeeklyChart" style="width:100%; height:100%;"></canvas>
-            </div>
-          </div>
-        {% endif %}
-
-        {% if compare_rows and compare_rows|length > 1 %}
-          <div class="section">
-            <div class="label-bar">Season Comparison</div>
-
-            {% if overlay %}
-              <div class="season-chart-container" style="margin-top: 1.5rem;">
-                <h3 style="margin-bottom: .5rem;">Cumulative training hours (season overlay)</h3>
-                <div style="height: 320px;">
-                  <canvas id="seasonOverlayChart" style="width:100%; height:100%;"></canvas>
-                </div>
-              </div>
-            {% endif %}
-
-            <table class="styled-table">
-              <thead>
-                <tr>
-                  <th>Season</th>
-                  <th>Dates</th>
-                  <th style="text-align:right;">Hours</th>
-                  <th style="text-align:right;">Sessions</th>
-                  <th style="text-align:right;">Weeks</th>
-                  <th style="text-align:right;">Avg/wk</th>
-                  <th>Top category</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for r in compare_rows %}
-                  {% set is_sel = (selected_season and r.id == selected_season.id) %}
-                  <tr {% if is_sel %}style="outline: 2px solid var(--theme-color-primary);"{% endif %}>
-                    <td>
-                      <a href="{{ url_for('views.season_view', season_id=r.id) }}">{{ r.name }}</a>
-                      {% if r.is_in_progress %}
-                        <span style="font-size:0.9em; opacity:0.75;">(to date)</span>
-                      {% endif %}
-                    </td>
-                    <td>{{ r.start_date }} → {{ r.end_date }}</td>
-                    <td style="text-align:right;">{{ "%.1f"|format(r.total_hours) }}</td>
-                    <td style="text-align:right;">{{ r.sessions }}</td>
-                    <td style="text-align:right;">{{ r.weeks }}</td>
-                    <td style="text-align:right;">{{ "%.1f"|format(r.avg_hours_per_week) }}</td>
-                    <td>{{ r.top_category or "—" }}</td>
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Season</th>
+                    <th>Dates</th>
+                    <th class="text-right">Hours</th>
+                    <th class="text-right">Sessions</th>
+                    <th style="text-right">Weeks</th>
+                    <th style="text-right">Avg/wk</th>
+                    <th>Top category</th>
                   </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% endif %}
+                </thead>
+                <tbody>
+                  {% for r in compare_rows %}
+                    {% set is_sel = (selected_season and r.id == selected_season.id) %}
+                    <tr class="{% if is_sel %}row-outline-primary{% endif %}">
+                      <td>
+                        <a href="{{ url_for('views.season_view', season_id=r.id) }}">{{ r.name }}</a>
+                        {% if r.is_in_progress %}
+                          <span class="muted-sm">(to date)</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ r.start_date }} → {{ r.end_date }}</td>
+                      <td class="text-right">{{ "%.1f"|format(r.total_hours) }}</td>
+                      <td style="text-right">{{ r.sessions }}</td>
+                      <td style="text-right">{{ r.weeks }}</td>
+                      <td style="text-right">{{ "%.1f"|format(r.avg_hours_per_week) }}</td>
+                      <td>{{ r.top_category or "—" }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
 
         {% else %}
-        <p>No active season found. Pick one from the list (or mark one active in Admin).</p>
+          <p>No active season found. Pick one from the list (or mark one active in Admin).</p>
         {% endif %}
-
-    {% endif %}
+      {% endif %}
+    </div>
 </div>
 
 

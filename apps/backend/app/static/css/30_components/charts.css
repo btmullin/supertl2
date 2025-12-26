@@ -22,3 +22,8 @@
   max-width: none;
   margin: 1rem 0;
 }
+
+/* allow spark bars to set height via CSS variable */
+.spark-bar {
+  height: var(--bar-h, 0%);
+}

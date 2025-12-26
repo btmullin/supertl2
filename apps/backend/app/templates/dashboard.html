@@ -38,7 +38,7 @@
             {% elif activities|length == 1 %}
               {% set activity = activities[0] %}
               <!-- A single activity goes on the same row as the date -->
-              <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
+              <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" class="row-clickable">
                 <td class="col-date">{{ day.strftime('%A') }}</td>
                 <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
                 <td class="col-name">{{ activity.name }}</td>
@@ -54,8 +54,8 @@
                 <td class="col-time-summary">{{ daily_summaries[day].total_moving_s | format_duration }}</td>
               </tr>
               {% for activity in activities %}
-              <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" style="cursor: pointer;">
-                <td style="text-align:right;">{{ activity.start_time_utc | localtime | time_only }}</td>
+              <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" class="row-clickable">
+                <td class="text-right">{{ activity.start_time_utc | localtime | time_only }}</td>
                 <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
                 <td class="col-name">{{ activity.name }}</td>
                 <td class="col-distance">{{ activity.distance_m | km }}</td>

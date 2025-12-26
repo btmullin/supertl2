@@ -4,8 +4,8 @@
 <div class="section">
   <h1>Admin: Seasons</h1>
 
-  <div class="card" style="margin-top: 1rem;">
-    <h2 style="margin-top: 0;">Create season</h2>
+  <div class="card mt-2">
+    <h2 class="mt-0">Create season</h2>
 
     <form method="post" action="{{ url_for('views.admin_seasons') }}">
       {{ form.hidden_tag() }}
@@ -18,8 +18,8 @@
         {% endfor %}
       </div>
 
-      <div class="form-row" style="display:flex; gap: 1rem; flex-wrap: wrap;">
-        <div style="min-width: 14rem;">
+      <div class="form-row flex-row flex-wrap gap-4">
+        <div class="minw-14">
           <label for="{{ form.start_date.id }}">{{ form.start_date.label.text }}</label>
           {{ form.start_date(class_="form-control", placeholder="YYYY-MM-DD") }}
           {% for err in form.start_date.errors %}
@@ -27,7 +27,7 @@
           {% endfor %}
         </div>
 
-        <div style="min-width: 14rem;">
+        <div class="minw-14">
           <label for="{{ form.end_date.id }}">{{ form.end_date.label.text }}</label>
           {{ form.end_date(class_="form-control", placeholder="YYYY-MM-DD") }}
           {% for err in form.end_date.errors %}
@@ -35,7 +35,7 @@
           {% endfor %}
         </div>
 
-        <div style="display:flex; align-items: end; padding-bottom: .25rem;">
+        <div class="flex-row items-end pb-1">
           <label style="display:flex; align-items:center; gap:.5rem; margin:0;">
             {{ form.is_active() }}
             {{ form.is_active.label.text }}
@@ -43,8 +43,8 @@
         </div>
       </div>
 
-      <div style="margin-top: 1rem;">
-        {{ form.submit(class_="btn btn-primary") }}
+      <div class="mt-2">
+        {{ form.submit(class_="btn") }}
       </div>
 
       {% for err in form.end_date.errors %}
@@ -53,16 +53,16 @@
     </form>
   </div>
 
-  <div class="card" style="margin-top: 1.5rem;">
-    <h2 style="margin-top: 0;">Existing seasons</h2>
+  <div class="card mt-3">
+    <h2 class="mt-0">Existing seasons</h2>
 
     {% if seasons and seasons|length %}
       <table class="summary-table">
         <thead>
           <tr>
             <th>Name</th>
-            <th style="white-space:nowrap;">Start</th>
-            <th style="white-space:nowrap;">End</th>
+            <th class="nowrap">Start</th>
+            <th class="nowrap">End</th>
             <th>Active</th>
           </tr>
         </thead>
@@ -70,8 +70,8 @@
           {% for s in seasons %}
             <tr>
               <td>{{ s.name }}</td>
-              <td style="white-space:nowrap;">{{ s.start_date.strftime('%Y-%m-%d') }}</td>
-              <td style="white-space:nowrap;">{{ s.end_date.strftime('%Y-%m-%d') }}</td>
+              <td class="nowrap">{{ s.start_date.strftime('%Y-%m-%d') }}</td>
+              <td class="nowrap">{{ s.end_date.strftime('%Y-%m-%d') }}</td>
               <td>{{ "Yes" if s.is_active else "No" }}</td>
             </tr>
           {% endfor %}
