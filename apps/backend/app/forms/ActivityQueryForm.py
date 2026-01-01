@@ -5,6 +5,7 @@ from wtforms.validators import Optional
 
 class ActivityQueryFilterForm(FlaskForm):
     categories = SelectMultipleField("Categories", coerce=int, validators=[Optional()])
+    workout_types = SelectMultipleField("Workout Type", coerce=int, validators=[Optional()])
     is_training = SelectField(
         "Training only",
         choices=[("", "Any"), ("1", "Yes"), ("0", "No")],
