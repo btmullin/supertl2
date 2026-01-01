@@ -710,6 +710,13 @@ def activity_query():
         """)).fetchall()
         form.categories.choices = [(row.id, row.full_path) for row in category_paths]
 
+        workout_types = (
+            sqla_db.session.query(WorkoutType)
+            .order_by(WorkoutType.name)
+            .all()
+        )
+        form.workout_types.choices = [(w.id, w.name) for w in workout_types]
+
         activities = None
         summary = None
         category_summary = None
@@ -745,6 +752,15 @@ def activity_query():
         if form.max_time.data:
             query_filter.append(("Max Time (minutes)", str(form.max_time.data)))
 
+        if form.workout_types.data:
+            wt_names = dict(
+                sqla_db.session.query(WorkoutType.id, WorkoutType.name).all()
+            )
+            query_filter.append((
+                "Workout Type",
+                ", ".join(wt_names.get(wid, str(wid)) for wid in form.workout_types.data),
+            ))
+
         # Fetch all canonical activities with training_logs preloaded.
         # (We filter in Python for now; DB size is modest and this keeps
         # the logic simple & canonical-friendly.)
@@ -761,6 +777,12 @@ def activity_query():
             if form.categories.data:
                 cat_id = getattr(tl, "categoryId", None) if tl else None
                 if cat_id not in form.categories.data:
+                    continue
+
+            # Workout type filter (match on TrainingLogData.workoutTypeId)
+            if form.workout_types.data:
+                wt_id = getattr(tl, "workoutTypeId", None) if tl else None
+                if wt_id not in form.workout_types.data:
                     continue
 
             # Training flag filter (TrainingLogData.isTraining)

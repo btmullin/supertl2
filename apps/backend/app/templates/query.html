@@ -12,6 +12,11 @@
       </div>
 
       <div>
+        <label>{{ form.workout_types.label }}</label>
+        {{ form.workout_types(size=6, multiple=True) }}
+      </div>
+
+      <div>
         <label>{{ form.is_training.label }}</label>
         {{ form.is_training() }}
       </div>
