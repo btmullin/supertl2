@@ -128,51 +128,56 @@
           {% endif %}
 
           {% if compare_rows and compare_rows|length > 1 %}
-            <div class="section">
-              <div class="label-bar">Season Comparison</div>
 
-              {% if overlay %}
-                <div class="season-chart-container mt-3">
-                  <h3 class="mb-1">Cumulative training hours (season overlay)</h3>
+            {% if overlay %}
+              <div class="season-chart-container mt-3">
+                <div class="label-bar">Cumulative training hours (season overlay)</div>
+                <div class="h-320">
+                  <canvas id="seasonOverlayChart" class="wh-100"></canvas>
+                </div>
+              </div>
+              {% if overlay.others and overlay.others|length > 0 %}
+                <div class="season-chart-container mt-2">
+                  <div class="label-bar">Ahead / Behind (vs reference)</div>
                   <div class="h-320">
-                    <canvas id="seasonOverlayChart" class="wh-100"></canvas>
+                    <canvas id="seasonDeltaChart" class="wh-100"></canvas>
                   </div>
                 </div>
               {% endif %}
+            {% endif %}
 
-              <table class="styled-table">
-                <thead>
-                  <tr>
-                    <th>Season</th>
-                    <th>Dates</th>
-                    <th class="text-right">Hours</th>
-                    <th class="text-right">Sessions</th>
-                    <th style="text-right">Weeks</th>
-                    <th style="text-right">Avg/wk</th>
-                    <th>Top category</th>
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Season</th>
+                  <th>Dates</th>
+                  <th class="text-right">Hours</th>
+                  <th class="text-right">Sessions</th>
+                  <th style="text-right">Weeks</th>
+                  <th style="text-right">Avg/wk</th>
+                  <th>Top category</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in compare_rows %}
+                  {% set is_sel = (selected_season and r.id == selected_season.id) %}
+                  <tr class="{% if is_sel %}row-outline-primary{% endif %}">
+                    <td>
+                      <a href="{{ url_for('views.season_view', season_id=r.id) }}">{{ r.name }}</a>
+                      {% if r.is_in_progress %}
+                        <span class="muted-sm">(to date)</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ r.start_date }} → {{ r.end_date }}</td>
+                    <td class="text-right">{{ "%.1f"|format(r.total_hours) }}</td>
+                    <td style="text-right">{{ r.sessions }}</td>
+                    <td style="text-right">{{ r.weeks }}</td>
+                    <td style="text-right">{{ "%.1f"|format(r.avg_hours_per_week) }}</td>
+                    <td>{{ r.top_category or "—" }}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {% for r in compare_rows %}
-                    {% set is_sel = (selected_season and r.id == selected_season.id) %}
-                    <tr class="{% if is_sel %}row-outline-primary{% endif %}">
-                      <td>
-                        <a href="{{ url_for('views.season_view', season_id=r.id) }}">{{ r.name }}</a>
-                        {% if r.is_in_progress %}
-                          <span class="muted-sm">(to date)</span>
-                        {% endif %}
-                      </td>
-                      <td>{{ r.start_date }} → {{ r.end_date }}</td>
-                      <td class="text-right">{{ "%.1f"|format(r.total_hours) }}</td>
-                      <td style="text-right">{{ r.sessions }}</td>
-                      <td style="text-right">{{ r.weeks }}</td>
-                      <td style="text-right">{{ "%.1f"|format(r.avg_hours_per_week) }}</td>
-                      <td>{{ r.top_category or "—" }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+                {% endfor %}
+              </tbody>
+            </table>
           {% endif %}
 
         {% else %}
@@ -337,133 +342,228 @@
 {% endif %}
 
 {% if overlay %}
-<script>
-  (function () {
-    const overlay = {{ overlay | tojson }};
-    const canvas = document.getElementById("seasonOverlayChart");
-    if (!overlay || !canvas) return;
+  <script>
+    (function () {
+      const overlay = {{ overlay | tojson }};
+      const canvas = document.getElementById("seasonOverlayChart");
+      if (!overlay || !canvas) return;
 
-    const primary = overlay.primary;
-    const others = overlay.others || [];
+      const primary = overlay.primary;
+      const others = overlay.others || [];
 
-    const maxWeeks = Math.max(
-      primary.weeks.length,
-      ...others.map(s => (s.weeks || []).length)
-    );
-    const labels = Array.from({length: maxWeeks}, (_, i) => `W${i+1}`);
+      const maxWeeks = Math.max(
+        primary.weeks.length,
+        ...others.map(s => (s.weeks || []).length)
+      );
+      const labels = Array.from({length: maxWeeks}, (_, i) => `W${i+1}`);
 
-    function seriesToData(s) {
-      const arr = new Array(maxWeeks).fill(null);
-      (s.weeks || []).forEach(w => {
-        const idx = (w.week_index || 0) - 1;
-        if (idx >= 0 && idx < maxWeeks) arr[idx] = w.cumulative_hours;
-      });
-      return arr;
-    }
+      function seriesToData(s) {
+        const arr = new Array(maxWeeks).fill(null);
+        (s.weeks || []).forEach(w => {
+          const idx = (w.week_index || 0) - 1;
+          if (idx >= 0 && idx < maxWeeks) arr[idx] = w.cumulative_hours;
+        });
+        return arr;
+      }
 
-    const primaryLabel = overlay.primary_in_progress ? `${primary.label} (to date)` : primary.label;
+      const primaryLabel = overlay.primary_in_progress ? `${primary.label} (to date)` : primary.label;
 
-    const datasets = [{
-      label: primaryLabel,
-      data: seriesToData(primary),
-      borderWidth: 3,
-      tension: 0.2,
-      spanGaps: true
-    }];
-
-    others.forEach((s) => {
-      datasets.push({
-        label: s.label,
-        data: seriesToData(s),
-        borderWidth: 2,
+      const datasets = [{
+        label: primaryLabel,
+        data: seriesToData(primary),
+        borderWidth: 3,
         tension: 0.2,
         spanGaps: true
+      }];
+
+      others.forEach((s) => {
+        datasets.push({
+          label: s.label,
+          data: seriesToData(s),
+          borderWidth: 2,
+          tension: 0.2,
+          spanGaps: true
+        });
       });
-    });
 
-    // Vertical marker at the selected season's current week (boundary)
-    const weekMarkerPlugin = {
-      id: 'weekMarkerPlugin',
-      afterDraw(chart) {
-        const week = overlay.primary_current_week;
-        if (!overlay.primary_in_progress || !week) return;
+      // Vertical marker at the selected season's current week (boundary)
+      const weekMarkerPlugin = {
+        id: 'weekMarkerPlugin',
+        afterDraw(chart) {
+          const week = overlay.primary_current_week;
+          if (!overlay.primary_in_progress || !week) return;
 
-        const xScale = chart.scales.x;
-        const yScale = chart.scales.y;
-        if (!xScale || !yScale) return;
+          const xScale = chart.scales.x;
+          const yScale = chart.scales.y;
+          if (!xScale || !yScale) return;
 
-        const idx = week - 1;
-        if (idx < 0 || idx >= labels.length) return;
+          const idx = week - 1;
+          if (idx < 0 || idx >= labels.length) return;
 
-        const x = xScale.getPixelForTick(idx);
-        const ctx = chart.ctx;
+          const x = xScale.getPixelForTick(idx);
+          const ctx = chart.ctx;
 
-        ctx.save();
-        ctx.globalAlpha = 0.6;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#666';   // neutral marker
-        ctx.setLineDash([6, 4]);
+          ctx.save();
+          ctx.globalAlpha = 0.6;
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#666';   // neutral marker
+          ctx.setLineDash([6, 4]);
 
-        ctx.beginPath();
-        ctx.moveTo(x, yScale.top);
-        ctx.lineTo(x, yScale.bottom);
-        ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x, yScale.top);
+          ctx.lineTo(x, yScale.bottom);
+          ctx.stroke();
 
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = '#666';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('to date', x + 6, yScale.top + 14);
-        ctx.restore();
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = '#666';
+          ctx.font = '12px sans-serif';
+          ctx.fillText('to date', x + 6, yScale.top + 14);
+          ctx.restore();
+        }
+      };
+
+      if (canvas._chartInstance) canvas._chartInstance.destroy();
+
+      canvas._chartInstance = new Chart(canvas.getContext("2d"), {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toFixed(1)} h`,
+
+                // ✅ Add delta line: Primary - Reference (first compare season)
+                afterBody: (tooltipItems) => {
+                  // tooltipItems is an array of items for the hovered x index
+                  // We assume datasets[0] is primary; datasets[1] is the first compare season
+                  const primaryItem = tooltipItems?.[0];
+                  const refItem = tooltipItems?.[1]; // first "other" season
+
+                  if (!primaryItem || !refItem) return [];
+
+                  const p = primaryItem.parsed?.y;
+                  const r = refItem.parsed?.y;
+
+                  if (p == null || r == null) return [];
+
+                  const d = p - r;
+                  const sign = d >= 0 ? "+" : "";
+                  return [`Δ (primary − ref): ${sign}${d.toFixed(1)} h`];
+                }
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: "Hours" } },
+            x: { title: { display: true, text: "Season week" } }
+          }
+        },
+        plugins: [weekMarkerPlugin]
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      const overlay = {{ overlay | tojson }};
+      const canvas = document.getElementById("seasonDeltaChart");
+      if (!overlay || !canvas) return;
+
+      const primary = overlay.primary;
+      const ref = (overlay.others && overlay.others.length) ? overlay.others[0] : null;
+      if (!ref) return; // no compare season selected
+
+      const maxWeeks = Math.max(
+        primary.weeks.length,
+        ref.weeks.length
+      );
+      const labels = Array.from({length: maxWeeks}, (_, i) => `W${i+1}`);
+
+      function toCumArray(series) {
+        const arr = new Array(maxWeeks).fill(null);
+        (series.weeks || []).forEach(w => {
+          const idx = (w.week_index || 0) - 1;
+          if (idx >= 0 && idx < maxWeeks) arr[idx] = Number(w.cumulative_hours ?? null);
+        });
+        return arr;
       }
-    };
+
+      const p = toCumArray(primary);
+      const r = toCumArray(ref);
+
+      // delta only where both exist
+      const delta = p.map((pv, i) => (pv == null || r[i] == null) ? null : (pv - r[i]));
+
+    const currentWeek = overlay.primary_current_week || null; // 1-based
+    const currentIdx = currentWeek ? currentWeek - 1 : null;
+
+    const baseBar = "rgba(201, 203, 207, 0.85)";
+    const futureBar = "rgba(201, 203, 207, 0.25)";
+    const currentBar = "rgba(54, 162, 235, 0.90)";
 
     if (canvas._chartInstance) canvas._chartInstance.destroy();
 
-    canvas._chartInstance = new Chart(canvas.getContext("2d"), {
-      type: "line",
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: { position: "bottom" },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toFixed(1)} h`,
-
-              // ✅ Add delta line: Primary - Reference (first compare season)
-              afterBody: (tooltipItems) => {
-                // tooltipItems is an array of items for the hovered x index
-                // We assume datasets[0] is primary; datasets[1] is the first compare season
-                const primaryItem = tooltipItems?.[0];
-                const refItem = tooltipItems?.[1]; // first "other" season
-
-                if (!primaryItem || !refItem) return [];
-
-                const p = primaryItem.parsed?.y;
-                const r = refItem.parsed?.y;
-
-                if (p == null || r == null) return [];
-
-                const d = p - r;
-                const sign = d >= 0 ? "+" : "";
-                return [`Δ (primary − ref): ${sign}${d.toFixed(1)} h`];
+      canvas._chartInstance = new Chart(canvas.getContext("2d"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: `Δ hours (${primary.label} − ${ref.label})`,
+            data: delta,
+            borderWidth: 1,
+            borderRadius: 6,
+            backgroundColor: (ctx) => {
+              const i = ctx.dataIndex;
+              if (!overlay.primary_in_progress || currentIdx == null) return baseBar;
+              if (i === currentIdx) return currentBar;      // current week highlighted
+              if (i > currentIdx) return futureBar;         // future weeks faded
+              return baseBar;                               // past weeks normal
+            },
+            borderColor: (ctx) => {
+              const i = ctx.dataIndex;
+              if (!overlay.primary_in_progress || currentIdx == null) return "rgba(201, 203, 207, 1)";
+              if (i === currentIdx) return "rgba(54, 162, 235, 1)";
+              if (i > currentIdx) return "rgba(201, 203, 207, 0.5)";
+              return "rgba(201, 203, 207, 1)";
+            }
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: { display: true, position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const v = ctx.parsed.y;
+                  if (v == null) return "—";
+                  const sign = v >= 0 ? "+" : "";
+                  return `${sign}${v.toFixed(1)} h`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              title: { display: true, text: "Hours ahead (+) / behind (−)" },
+              ticks: {
+                callback: (value) => `${value} h`
               }
             }
           }
-        },
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: "Hours" } },
-          x: { title: { display: true, text: "Season week" } }
         }
-      },
-      plugins: [weekMarkerPlugin]
-    });
-  })();
-</script>
+      });
+    })();
+  </script>
 {% endif %}
 
 
