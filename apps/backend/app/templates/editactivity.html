@@ -11,207 +11,207 @@
 
 <div class="whole-body">
   <div class="section">
-    <div class="flex-row flex-wrap gap-8">
+    <form method="POST">
+      {{ form.hidden_tag() }}
 
-      <!-- Left: Strava Info -->
-      <!-- Left: Canonical + Source Info -->
-      <div class="flex-1 minw-300">
+      <div class="flex-row flex-wrap gap-8">
 
-        <h3>Canonical Activity Info</h3>
-        <p>
-          <strong>Sources:</strong>
-          {% set has_any_source = false %}
+        <!-- Left: Strava Info -->
+        <!-- Left: Canonical + Source Info -->
+        <div class="flex-1 minw-300">
 
-          {# Strava source (single) #}
-          {% if strava_activity %}
-            {% set has_any_source = true %}
-            <a href="https://www.strava.com/activities/{{ strava_activity.activityId }}"
-               target="_blank" rel="noopener">
-              Strava
-            </a>
-            {% if sporttracks_sources and sporttracks_sources|length > 0 %}, {% endif %}
-          {% endif %}
+          <h3>Canonical Activity Info</h3>
+          <p>
+            <strong>Sources:</strong>
+            {% set has_any_source = false %}
 
-          {# SportTracks sources (one or many) #}
-          {% if sporttracks_sources and sporttracks_sources|length > 0 %}
-            {% set has_any_source = true %}
-            {% for st in sporttracks_sources %}
-              <a href="https://sporttracks.mobi/activity/{{ st.source_activity_id }}"
-                 target="_blank" rel="noopener">
-                SportTracks
-              </a>{% if not loop.last %}, {% endif %}
-            {% endfor %}
-          {% endif %}
-
-          {# Fallback if no sources at all #}
-          {% if not has_any_source %}
-            —
-          {% endif %}
-        </p>
-        <table class="styled-table">
-          <tbody>
-            <tr>
-              <th>Start Time</th>
-              <td>{{ canonical_activity.start_time_utc | localtime | pretty_datetime }}</td>
-            </tr>
-            <tr>
-              <th>Sport</th>
-              <td>{{ canonical_activity.sport }}</td>
-            </tr>
-            <tr>
-              <th>Name</th>
-              <td>{{ canonical_activity.name }}</td>
-            </tr>
-            <tr>
-              <th>Distance</th>
-              <td>{{ canonical_activity.distance_m | km }}</td>
-            </tr>
-            <tr>
-              <th>Duration</th>
-              <td>{{ canonical_activity.moving_time_s | format_duration }}</td>
-            </tr>
-            {# Optional: only if your Activity has a description column #}
-            {% if canonical_activity.description is defined %}
-              <tr>
-                <th>Description</th>
-                <td>{{ canonical_activity.description or "—" }}</td>
-              </tr>
+            {# Strava source (single) #}
+            {% if strava_activity %}
+              {% set has_any_source = true %}
+              <a href="https://www.strava.com/activities/{{ strava_activity.activityId }}"
+                target="_blank" rel="noopener">
+                Strava
+              </a>
+              {% if sporttracks_sources and sporttracks_sources|length > 0 %}, {% endif %}
             {% endif %}
-          </tbody>
-        </table>
 
-        {# --- Strava details (if present) --- #}
-        {% if strava_activity %}
-          <p></p>
-          <h3>Strava Activity Info</h3>
-          <a href="https://www.strava.com/activities/{{ strava_activity.activityId }}"
-             target="_blank" rel="noopener">
-            View on Strava
-          </a>
-          <p></p>
+            {# SportTracks sources (one or many) #}
+            {% if sporttracks_sources and sporttracks_sources|length > 0 %}
+              {% set has_any_source = true %}
+              {% for st in sporttracks_sources %}
+                <a href="https://sporttracks.mobi/activity/{{ st.source_activity_id }}"
+                  target="_blank" rel="noopener">
+                  SportTracks
+                </a>{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            {% endif %}
+
+            {# Fallback if no sources at all #}
+            {% if not has_any_source %}
+              —
+            {% endif %}
+          </p>
           <table class="styled-table">
             <tbody>
-              <tr><th>Start Time</th><td>{{ strava_activity.startDateTime | pretty_datetime }}</td></tr>
-              <tr><th>Sport</th><td>{{ strava_activity.sportType }}</td></tr>
-              <tr><th>Name</th><td>{{ strava_activity.name }}</td></tr>
-              <tr><th>Distance</th><td>{{ strava_activity.distance | km }}</td></tr>
-              <tr><th>Duration</th><td>{{ strava_activity.movingTimeInSeconds | format_duration }}</td></tr>
-              <tr><th>Calories</th><td>{{ strava_activity.calories or "—" }}</td></tr>
-              <tr><th>Avg HR</th><td>{{ strava_activity.averageHeartRate or "—" }}</td></tr>
-              <tr><th>Max HR</th><td>{{ strava_activity.maxHeartRate or "—" }}</td></tr>
-              <tr><th>Avg Power</th><td>{{ strava_activity.averagePower or "—" }}</td></tr>
-              <tr><th>Description</th><td>{{ strava_activity.description or "—" }}</td></tr>
+              <tr>
+                <th>Start Time</th>
+                <td>{{ canonical_activity.start_time_utc | localtime | pretty_datetime }}</td>
+              </tr>
+              <tr>
+                <th>Sport</th>
+                <td>{{ canonical_activity.sport }}</td>
+              </tr>
+              <tr>
+                <th>Name</th>
+                <td>{{ form.activityName() }}</td>
+              </tr>
+              <tr>
+                <th>Distance</th>
+                <td>{{ canonical_activity.distance_m | km }}</td>
+              </tr>
+              <tr>
+                <th>Duration</th>
+                <td>{{ canonical_activity.moving_time_s | format_duration }}</td>
+              </tr>
+              {# Optional: only if your Activity has a description column #}
+              {% if canonical_activity.description is defined %}
+                <tr>
+                  <th>Description</th>
+                  <td>{{ canonical_activity.description or "—" }}</td>
+                </tr>
+              {% endif %}
             </tbody>
           </table>
-        {% endif %}
-        {% if summary_polyline %}
-        <p></p>
-        <h4>Route (Strava)</h4>
-        <div id="map" class="map-lg mb-2"></div>
 
-        <script>
-          document.addEventListener("DOMContentLoaded", function () {
-            const encoded = {{ summary_polyline | tojson }};
-
-            if (!encoded) {
-              console.warn("No polyline available.");
-              return;
-            }
-
-            // Decode the polyline — returns a Leaflet Polyline
-            const polyline = L.Polyline.fromEncoded(encoded);
-
-            const map = L.map("map");
-
-            L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-              maxZoom: 18,
-            }).addTo(map);
-
-            polyline.addTo(map);
-            map.fitBounds(polyline.getBounds());
-          });
-        </script>
-        {% endif %}
-
-        {# --- SportTracks source metadata (if present) --- #}
-        {% if sporttracks_activity %}
+          {# --- Strava details (if present) --- #}
+          {% if strava_activity %}
+            <p></p>
+            <h3>Strava Activity Info</h3>
+            <a href="https://www.strava.com/activities/{{ strava_activity.activityId }}"
+              target="_blank" rel="noopener">
+              View on Strava
+            </a>
+            <p></p>
+            <table class="styled-table">
+              <tbody>
+                <tr><th>Start Time</th><td>{{ strava_activity.startDateTime | pretty_datetime }}</td></tr>
+                <tr><th>Sport</th><td>{{ strava_activity.sportType }}</td></tr>
+                <tr><th>Name</th><td>{{ strava_activity.name }}</td></tr>
+                <tr><th>Distance</th><td>{{ strava_activity.distance | km }}</td></tr>
+                <tr><th>Duration</th><td>{{ strava_activity.movingTimeInSeconds | format_duration }}</td></tr>
+                <tr><th>Calories</th><td>{{ strava_activity.calories or "—" }}</td></tr>
+                <tr><th>Avg HR</th><td>{{ strava_activity.averageHeartRate or "—" }}</td></tr>
+                <tr><th>Max HR</th><td>{{ strava_activity.maxHeartRate or "—" }}</td></tr>
+                <tr><th>Avg Power</th><td>{{ strava_activity.averagePower or "—" }}</td></tr>
+                <tr><th>Description</th><td>{{ strava_activity.description or "—" }}</td></tr>
+              </tbody>
+            </table>
+          {% endif %}
+          {% if summary_polyline %}
           <p></p>
-          <h3>SportTracks Activity Info</h3>
-          <a href="https://sporttracks.mobi/activity/{{ sporttracks_activity.activity_id }}"
-             target="_blank" rel="noopener">
-            View on SportTracks
-          </a>
-          <p></p>
-          <table class="styled-table">
-            <tbody>
-              <tr><th>Start Date</th><td>{{ sporttracks_activity.start_date }}</td></tr>
-              <tr><th>Start Time</th><td>{{ sporttracks_activity.start_time }}</td></tr>
-              <tr><th>Sport</th><td>{{ sporttracks_activity.category }}</td></tr>
-              <tr><th>Name</th><td>{{ sporttracks_activity.name }}</td></tr>
-              <tr><th>Distance</th><td>{{ sporttracks_activity.distance_m | km }}</td></tr>
-              <tr><th>Duration</th><td>{{ sporttracks_activity.duration_s | format_duration }}</td></tr>
-              <tr><th>Calories</th><td>{{ sporttracks_activity.calories_kcal or "—" }}</td></tr>
-              <tr><th>Avg HR</th><td>{{ sporttracks_activity.avg_heartrate_bpm or "—" }}</td></tr>
-              <tr><th>Max HR</th><td>{{ sporttracks_activity.maxHeartRate or "—" }}</td></tr>
-              <tr><th>Avg Power</th><td>{{ sporttracks_activity.avg_power_w or "—" }}</td></tr>
-              <tr><th>Description</th><td>{{ sporttracks_activity.notes or "—" }}</td></tr>
-            </tbody>
-          </table>
-        {% endif %}
+          <h4>Route (Strava)</h4>
+          <div id="map" class="map-lg mb-2"></div>
 
+          <script>
+            document.addEventListener("DOMContentLoaded", function () {
+              const encoded = {{ summary_polyline | tojson }};
+
+              if (!encoded) {
+                console.warn("No polyline available.");
+                return;
+              }
+
+              // Decode the polyline — returns a Leaflet Polyline
+              const polyline = L.Polyline.fromEncoded(encoded);
+
+              const map = L.map("map");
+
+              L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                maxZoom: 18,
+              }).addTo(map);
+
+              polyline.addTo(map);
+              map.fitBounds(polyline.getBounds());
+            });
+          </script>
+          {% endif %}
+
+          {# --- SportTracks source metadata (if present) --- #}
+          {% if sporttracks_activity %}
+            <p></p>
+            <h3>SportTracks Activity Info</h3>
+            <a href="https://sporttracks.mobi/activity/{{ sporttracks_activity.activity_id }}"
+              target="_blank" rel="noopener">
+              View on SportTracks
+            </a>
+            <p></p>
+            <table class="styled-table">
+              <tbody>
+                <tr><th>Start Date</th><td>{{ sporttracks_activity.start_date }}</td></tr>
+                <tr><th>Start Time</th><td>{{ sporttracks_activity.start_time }}</td></tr>
+                <tr><th>Sport</th><td>{{ sporttracks_activity.category }}</td></tr>
+                <tr><th>Name</th><td>{{ sporttracks_activity.name }}</td></tr>
+                <tr><th>Distance</th><td>{{ sporttracks_activity.distance_m | km }}</td></tr>
+                <tr><th>Duration</th><td>{{ sporttracks_activity.duration_s | format_duration }}</td></tr>
+                <tr><th>Calories</th><td>{{ sporttracks_activity.calories_kcal or "—" }}</td></tr>
+                <tr><th>Avg HR</th><td>{{ sporttracks_activity.avg_heartrate_bpm or "—" }}</td></tr>
+                <tr><th>Max HR</th><td>{{ sporttracks_activity.maxHeartRate or "—" }}</td></tr>
+                <tr><th>Avg Power</th><td>{{ sporttracks_activity.avg_power_w or "—" }}</td></tr>
+                <tr><th>Description</th><td>{{ sporttracks_activity.notes or "—" }}</td></tr>
+              </tbody>
+            </table>
+          {% endif %}
+
+        </div>
+
+
+        <!-- Right: Editable Training Log Fields -->
+        <div class="flex-1 flex-fixed-800">
+          <h3>Edit Training Log Data</h3>
+            <div class="form-group">
+              <label>{{ form.workoutTypeId.label }}</label>
+              {{ form.workoutTypeId() }}
+            </div>
+
+            <div class="form-group">
+              <label>{{ form.categoryId.label }}</label>
+              {{ form.categoryId() }}
+            </div>
+
+            <div class="form-group">
+              <label>{{ form.notes.label }}</label>
+              {{ form.notes(rows=4) }}
+            </div>
+
+            <div class="form-group">
+              <label>{{ form.tags.label }}</label>
+              {{ form.tags() }}
+            </div>
+
+            <div class="form-group">
+              <label>{{ form.isTraining.label }}</label>
+              {{ form.isTraining() }}
+            </div>
+
+            <div>
+              {{ form.submit(class="btn") }}
+              {{ form.cancel(class="btn") }}
+            </div>
+            <hr>
+            <div class="quick-actions">
+              {{ form.general_trail(class_="btn") }}
+              {{ form.general_mountain_bike(class_="btn") }}
+              {{ form.general_gravel_bike(class_="btn") }}
+              {{ form.general_virtual_bike(class_="btn") }}
+              {{ form.strength(class_="btn") }}
+              {{ form.l3_skate_roller(class_="btn") }}
+              {{ form.l3_classic_roller(class_="btn") }}
+              {{ form.general_skate_ski(class_="btn") }}
+              {{ form.general_classic_ski(class_="btn") }}
+            </div>
+        </div>
       </div>
-
-
-      <!-- Right: Editable Training Log Fields -->
-      <div class="flex-1 flex-fixed-800">
-        <h3>Edit Training Log Data</h3>
-        <form method="POST">
-          {{ form.hidden_tag() }}
-
-          <div class="form-group">
-            <label>{{ form.workoutTypeId.label }}</label>
-            {{ form.workoutTypeId() }}
-          </div>
-
-          <div class="form-group">
-            <label>{{ form.categoryId.label }}</label>
-            {{ form.categoryId() }}
-          </div>
-
-          <div class="form-group">
-            <label>{{ form.notes.label }}</label>
-            {{ form.notes(rows=4) }}
-          </div>
-
-          <div class="form-group">
-            <label>{{ form.tags.label }}</label>
-            {{ form.tags() }}
-          </div>
-
-          <div class="form-group">
-            <label>{{ form.isTraining.label }}</label>
-            {{ form.isTraining() }}
-          </div>
-
-          <div>
-            {{ form.submit(class="btn") }}
-            {{ form.cancel(class="btn") }}
-          </div>
-          <hr>
-          <div class="quick-actions">
-            {{ form.general_trail(class_="btn") }}
-            {{ form.general_mountain_bike(class_="btn") }}
-            {{ form.general_gravel_bike(class_="btn") }}
-            {{ form.general_virtual_bike(class_="btn") }}
-            {{ form.strength(class_="btn") }}
-            {{ form.l3_skate_roller(class_="btn") }}
-            {{ form.l3_classic_roller(class_="btn") }}
-            {{ form.general_skate_ski(class_="btn") }}
-            {{ form.general_classic_ski(class_="btn") }}
-          </div>
-        </form>
-      </div>
-    </div>
+    </form>
   </div>
   {% if strava_activity %}
   <div class="section">

@@ -5,6 +5,7 @@ from wtforms.validators import Optional
 class EditActivityForm(FlaskForm):
     activityId = HiddenField("Activity ID")
 
+    activityName = StringField("Activity Name", validators=[Optional()])
     workoutTypeId = SelectField("Workout Type", coerce=int, validators=[Optional()])
     categoryId = SelectField("Category", coerce=int, validators=[Optional()])
 
