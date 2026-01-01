@@ -432,7 +432,26 @@
           legend: { position: "bottom" },
           tooltip: {
             callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toFixed(1)} h`
+              label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toFixed(1)} h`,
+
+              // ✅ Add delta line: Primary - Reference (first compare season)
+              afterBody: (tooltipItems) => {
+                // tooltipItems is an array of items for the hovered x index
+                // We assume datasets[0] is primary; datasets[1] is the first compare season
+                const primaryItem = tooltipItems?.[0];
+                const refItem = tooltipItems?.[1]; // first "other" season
+
+                if (!primaryItem || !refItem) return [];
+
+                const p = primaryItem.parsed?.y;
+                const r = refItem.parsed?.y;
+
+                if (p == null || r == null) return [];
+
+                const d = p - r;
+                const sign = d >= 0 ? "+" : "";
+                return [`Δ (primary − ref): ${sign}${d.toFixed(1)} h`];
+              }
             }
           }
         },
