@@ -444,6 +444,8 @@ def edit_activity():
                 training_log.isTraining if training_log.isTraining is not None else 2
             )
 
+        form.activityName.data = canonical_activity.name
+
         return render_template(
             "editactivity.html",
             form=form,
@@ -531,6 +533,11 @@ def edit_activity():
         training_data.tags = form.tags.data
         training_data.isTraining = form.isTraining.data
 
+        # Update canonical activity name (if changed)
+        new_name = (form.activityName.data or "").strip()
+        if new_name and new_name != canonical_activity.name:
+            canonical_activity.name = new_name
+    
         sqla_db.session.commit()
         flash("Metadata updated.")
         return redirect(next_url)
