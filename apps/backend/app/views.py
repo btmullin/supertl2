@@ -108,6 +108,16 @@ def allowed_file(filename):
         in current_app.config["ALLOWED_EXTENSIONS"]
     )
 
+from datetime import datetime, timedelta, timezone
+
+def _utc_bounds_for_local_date_range(start_local, end_local_inclusive):
+    start_utc = datetime.combine(start_local, datetime.min.time(), tzinfo=timezone.utc) - timedelta(days=1)
+    end_utc_excl = datetime.combine(end_local_inclusive + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc) + timedelta(days=1)
+    return (
+        start_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        end_utc_excl.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
 def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_after: int = 5):
     """
     Build a time series of weekly total training time (hours) around a given week.
@@ -135,12 +145,15 @@ def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_aft
     window_end = center_week_start + timedelta(weeks=weeks_after, days=6)
 
     # Fetch training activities in the window (canonical Activity + TrainingLogData.isTraining)
-    activities = (
+    start_utc_s, end_utc_excl_s = _utc_bounds_for_local_date_range(window_start, window_end)
+
+    candidate_activities = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            func.date(Activity.start_time_utc).between(window_start, window_end),
+            Activity.start_time_utc >= start_utc_s,
+            Activity.start_time_utc < end_utc_excl_s,
         )
         .order_by(Activity.start_time_utc)
         .all()
@@ -153,7 +166,7 @@ def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_aft
         per_week_seconds[ws] = 0
 
     # Bucket activities by LOCAL week (using analytics helper)
-    for a in activities:
+    for a in candidate_activities:
         local_date = get_local_date_for_activity(a)
         if local_date is None:
             continue
