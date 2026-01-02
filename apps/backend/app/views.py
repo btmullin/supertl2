@@ -46,6 +46,7 @@ from app.services.calendar import (
     get_calendar_year_overview,
     get_calendar_month_overview
 )
+from app.services.timezones import activity_local_dt
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
@@ -838,7 +839,7 @@ def activity_query():
                 if is_tr != wanted:
                     continue
 
-            # Date filters use local date (America/Chicago)
+            # Date filters use the activity-local date (from Activity.tz_name)
             if form.date_start.data or form.date_end.data:
                 local_date = get_local_date_for_activity(a)
                 if form.date_start.data and (local_date is None or local_date < form.date_start.data):
@@ -857,7 +858,7 @@ def activity_query():
             filtered.append(a)
 
         # Sort ascending by start datetime (using canonical helper)
-        filtered.sort(key=lambda x: get_start_datetime(x) or datetime.min)
+        filtered.sort(key=lambda x: activity_local_dt(x) or datetime.min)
 
         activities = filtered
         summary = summarize_activities(activities)
