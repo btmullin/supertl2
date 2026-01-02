@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from calendar import monthrange
 
@@ -12,12 +12,38 @@ from ..models import Activity, TrainingLogData
 from ..services.dates import start_of_week, week_offset_for_date
 
 
-LOCAL_UTC_OFFSET_HOURS = -6
+def _local_day_expr_from_offset_minutes(utc_text_col, offset_minutes_col):
+    """
+    SQLite: date(datetime(start_time_utc, printf('%+d minutes', utc_offset_minutes)))
+    Returns a 'YYYY-MM-DD' string.
+    """
+    offset = func.coalesce(offset_minutes_col, 0)
+    return func.date(func.datetime(utc_text_col, func.printf("%+d minutes", offset)))
 
-def _local_day_expr_utc_text(col):
-    # SQLite: date(datetime(col, '-6 hours'))
-    sign = "+" if LOCAL_UTC_OFFSET_HOURS >= 0 else "-"
-    return func.date(func.datetime(col, f"{sign}{abs(LOCAL_UTC_OFFSET_HOURS)} hours"))
+def _to_utc_iso(dt: datetime) -> str:
+    """
+    Convert aware datetime to your canonical text format: YYYY-MM-DDTHH:MM:SSZ
+    """
+    dt = dt.astimezone(timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _utc_bounds_for_local_date_range(
+    start_local: date,
+    end_local_inclusive: date,
+) -> tuple[str, str]:
+    """
+    Return a conservative UTC bounding box [start_utc, end_utc_excl) that
+    definitely contains all activities whose *local* date is in [start_local, end_local].
+
+    We do not know per-row timezone in SQL, so we widen bounds by ~1 day on both ends.
+    """
+    # Conservative: include any possible tz shift.
+    # start_local at 00:00 local could be as late as UTC+14 -> subtract 14h => previous UTC day
+    # end_local at 23:59 local could be as early as UTC-12 -> add 12h => next UTC day
+    start_utc = datetime.combine(start_local, datetime.min.time(), tzinfo=timezone.utc) - timedelta(days=1)
+    end_utc_excl = datetime.combine(end_local_inclusive + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc) + timedelta(days=1)
+    return _to_utc_iso(start_utc), _to_utc_iso(end_utc_excl)
 
 @dataclass(frozen=True)
 class DayTotals:
@@ -79,7 +105,7 @@ def get_calendar_year_overview(year: int, use_local: bool = True) -> Dict[str, A
             break
 
     # Build aggregation query: group by local date.
-    day_expr = _local_day_expr_utc_text(Activity.start_time_utc)
+    day_expr = _local_day_expr_from_offset_minutes(Activity.start_time_utc, Activity.utc_offset_minutes)
 
     cols = [
         day_expr.label("day"),
@@ -96,8 +122,8 @@ def get_calendar_year_overview(year: int, use_local: bool = True) -> Dict[str, A
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            ts_col >= datetime(year, 1, 1),
-            ts_col < datetime(year + 1, 1, 1),
+            day_expr >= f"{year:04d}-01-01",
+            day_expr <= f"{year:04d}-12-31",
         )
         .group_by(day_expr)
         .all()
@@ -182,7 +208,7 @@ def get_calendar_month_overview(year: int, month: int, use_local: bool = True):
     start_utc = f"{grid_start.isoformat()}T00:00:00Z"
     end_utc_excl = f"{(grid_end + timedelta(days=1)).isoformat()}T00:00:00Z"
 
-    day_expr = _local_day_expr_utc_text(Activity.start_time_utc)
+    day_expr = _local_day_expr_from_offset_minutes(Activity.start_time_utc, Activity.utc_offset_minutes)
 
     rows = (
         sqla_db.session.query(
@@ -194,8 +220,8 @@ def get_calendar_month_overview(year: int, month: int, use_local: bool = True):
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            Activity.start_time_utc >= start_utc,
-            Activity.start_time_utc < end_utc_excl,
+            day_expr >= grid_start.isoformat(),
+            day_expr <= grid_end.isoformat(),
         )
         .group_by(day_expr)
         .all()

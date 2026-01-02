@@ -13,6 +13,9 @@
 -- ============================================================================
 
 -- One row per real-world workout / activity, in canonical UTC time.
+-- NOTE: Timezone columns (activity.tz_name, utc_offset_minutes, tz_source) were added
+-- to support activity-local grouping (calendar/day/week) independent of viewer location.
+-- Existing databases should apply ALTER TABLE migrations and backfill tz_name from sources.
 CREATE TABLE activity (
   id               INTEGER PRIMARY KEY,
   start_time_utc   TEXT    NOT NULL,  -- ISO8601 UTC (e.g. 2025-08-29T19:24:52Z)
@@ -23,11 +26,18 @@ CREATE TABLE activity (
   name             TEXT,              -- canonical / preferred name
   sport            TEXT,              -- canonical sport label
   source_quality   INTEGER DEFAULT 0, -- source quality heuristic (0 = unknown)
+
+  -- Timezone semantics for interpreting start_time_utc into activity-local time
+  tz_name          TEXT,              -- IANA timezone (e.g. 'America/Chicago')
+  utc_offset_minutes INTEGER,         -- offset at start_time_utc (derived; DST-aware)
+  tz_source        TEXT,              -- e.g. 'strava', 'gps', 'manual', 'fallback'
+
   created_at_utc   TEXT NOT NULL
                     DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   updated_at_utc   TEXT NOT NULL
                     DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
+
 
 CREATE INDEX ix_activity_start ON activity(start_time_utc);
 CREATE INDEX ix_activity_sport ON activity(sport);
