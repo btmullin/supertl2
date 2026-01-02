@@ -25,22 +25,37 @@ from .services.category_paths import build_category_cache, category_full_path_fr
 from .services.analytics import get_primary_training_log
 from .models.category import Category
 from .db.base import sqla_db
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
-LOCAL_TZ = ZoneInfo("America/Chicago")
-UTC_TZ = ZoneInfo("UTC")
+from .services.timezones import (
+    HOME_TZ_NAME,
+    utc_text_to_local_dt,
+    get_activity_tz_name,
+)
 
 def utc_to_local(utc_text):
+    """
+    Backwards-compatible filter:
+    Converts a UTC ISO8601 string into a datetime in HOME_TZ_NAME.
+    (Does NOT use activity tz_name because it only receives a string.)
+    """
     if not utc_text:
         return None
-    if utc_text.endswith("Z"):
-        utc_text = utc_text[:-1]
+    return utc_text_to_local_dt(utc_text, HOME_TZ_NAME)
 
-    dt = datetime.fromisoformat(utc_text)
-    dt = dt.replace(tzinfo=UTC_TZ)
-    return dt.astimezone(LOCAL_TZ)
+def activity_localtime(activity):
+    """
+    New preferred filter:
+    Accepts a canonical Activity (or anything with start_time_utc + tz_name)
+    and converts start_time_utc into the activity's local timezone.
+    """
+    if activity is None:
+        return None
 
+    utc_text = getattr(activity, "start_time_utc", None)
+    if not utc_text:
+        return None
+
+    tz_name = get_activity_tz_name(activity)
+    return utc_text_to_local_dt(utc_text, tz_name)
 
 def _get_category_cache():
     cache = getattr(g, "_category_cache", None)
@@ -175,4 +190,5 @@ def register_filters(app):
     app.jinja_env.filters["displaySportOrCategory"] = displaySportOrCategory
     app.jinja_env.filters["category_path"] = category_path_filter
     app.jinja_env.filters["localtime"] = utc_to_local
+    app.jinja_env.filters["activity_localtime"] = activity_localtime
 

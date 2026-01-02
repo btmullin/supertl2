@@ -7,8 +7,8 @@ from collections import defaultdict, Counter
 from collections import OrderedDict
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
+from .timezones import utc_text_to_local_date, parse_utc_iso, HOME_TZ_NAME
 
-LOCAL_TZ = ZoneInfo("America/Chicago")
 UTC_TZ = ZoneInfo("UTC")
 
 def _get_distance_m(a: _Any) -> Optional[float]:
@@ -70,16 +70,25 @@ def get_primary_training_log(a: _Any):
 
 def get_local_date_for_activity(a):
     """
-    Convert an Activity's start time to local (America/Chicago) date.
-    Works for canonical Activity (start_time_utc) or StravaActivity (startDateTime).
-    """
-    dt = get_start_datetime(a)
-    if dt is None:
-        return None
+    Activity-local calendar date for the activity's start time.
 
-    # treat dt as UTC and convert to local
-    dt_utc = dt.replace(tzinfo=UTC_TZ)
-    return dt_utc.astimezone(LOCAL_TZ).date()
+    Canonical Activity: uses start_time_utc + tz_name (fallback HOME_TZ_NAME)
+    StravaActivity: uses startDateTime assumed UTC, converted to HOME_TZ_NAME
+    """
+    # Canonical Activity path
+    utc_text = getattr(a, "start_time_utc", None)
+    if utc_text:
+        tz_name = getattr(a, "tz_name", None) or HOME_TZ_NAME
+        return utc_text_to_local_date(utc_text, tz_name)
+
+    # StravaActivity path (legacy)
+    dt = getattr(a, "startDateTime", None)
+    if isinstance(dt, datetime):
+        dt_utc = dt if dt.tzinfo else dt.replace(tzinfo=UTC_TZ)
+        # If you still want viewer-home grouping for legacy StravaActivity:
+        return dt_utc.astimezone(ZoneInfo(HOME_TZ_NAME)).date()
+
+    return None
 
 def get_start_datetime(a: _Any) -> Optional[datetime]:
     """
@@ -91,18 +100,16 @@ def get_start_datetime(a: _Any) -> Optional[datetime]:
     """
     dt = getattr(a, "startDateTime", None)
     if isinstance(dt, datetime):
-        return dt
+        return dt if dt.tzinfo else dt.replace(tzinfo=UTC_TZ)
 
     # canonical case: start_time_utc is a TEXT ISO string
     text = getattr(a, "start_time_utc", None)
     if text:
-        s = text
-        if s.endswith("Z"):
-            s = s[:-1]
         try:
-            return datetime.fromisoformat(s)
-        except ValueError:
+            return parse_utc_iso(text)  # returns aware UTC datetime
+        except Exception:
             return None
+
 
     return None
 
@@ -276,9 +283,10 @@ def _period_bounds_for_activities(
 ) -> Optional[Tuple[date, date]]:
     dates = []
     for a in activities:
-        dt = get_start_datetime(a)
-        if isinstance(dt, datetime):
-            dates.append(dt.date())
+        d = get_local_date_for_activity(a)
+        if isinstance(d, date):
+            dates.append(d)
+
     if not dates:
         return None
     dmin, dmax = min(dates), max(dates)
@@ -322,9 +330,10 @@ def bucket_daily(
     """Group activities by calendar day (local date of startDateTime)."""
     groups: Dict[date, list] = defaultdict(list)
     for a in activities:
-        dt = get_start_datetime(a)
-        if isinstance(dt, datetime):
-            groups[dt.date()].append(a)
+        d = get_local_date_for_activity(a)
+        if isinstance(d, date):
+            groups[d].append(a)
+
 
     # Determine bounds if requested
     if fill_missing:
@@ -356,9 +365,8 @@ def bucket_weekly(
     """Group activities by week; key is the date of the week's start."""
     groups: Dict[date, list] = defaultdict(list)
     for a in activities:
-        dt = get_start_datetime(a)
-        if isinstance(dt, datetime):
-            d = dt.date()
+        d = get_local_date_for_activity(a)
+        if isinstance(d, date):
             k = _week_start(d, week_start)
             groups[k].append(a)
 
@@ -389,9 +397,8 @@ def bucket_monthly(
     """Group activities by calendar month; key is the first day of that month."""
     groups: Dict[date, list] = defaultdict(list)
     for a in activities:
-        dt = get_start_datetime(a)
-        if isinstance(dt, datetime):
-            d = dt.date()
+        d = get_local_date_for_activity(a)
+        if isinstance(d, date):
             k = _month_start(d)
             groups[k].append(a)
 

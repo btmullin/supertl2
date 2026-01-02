@@ -3,7 +3,8 @@
 import os
 import sys
 import json
-from datetime import datetime, timedelta, time
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from collections import defaultdict, OrderedDict
 from flask import (
     Blueprint,
@@ -58,8 +59,16 @@ PER_PAGE = 25
 
 views = Blueprint("views", __name__)
 
-from datetime import date
-from zoneinfo import ZoneInfo
+def _utc_bounds_for_local_week(start_of_week, end_of_week):
+    """
+    Conservative bounding box: include one extra day on both ends.
+    This ensures we fetch anything that might map into the local week after tz conversion.
+    """
+    start_utc = datetime.combine(start_of_week, datetime.min.time(), tzinfo=timezone.utc) - timedelta(days=1)
+    end_utc_excl = datetime.combine(end_of_week + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc) + timedelta(days=1)
+    start_utc_s = start_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    end_utc_excl_s = end_utc_excl.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return start_utc_s, end_utc_excl_s
 
 def _today_local_date() -> date:
     return datetime.now(ZoneInfo("America/Chicago")).date()
@@ -186,25 +195,31 @@ def get_dashboard_context(week_offset=0):
     start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
     end_of_week = start_of_week + timedelta(days=6)
 
-    # Fetch activities in date range
-    activities = (
+    start_utc_s, end_utc_excl_s = _utc_bounds_for_local_week(start_of_week, end_of_week)
+
+    candidate_activities = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            func.date(Activity.start_time_utc).between(start_of_week, end_of_week),
+            Activity.start_time_utc >= start_utc_s,
+            Activity.start_time_utc < end_utc_excl_s,
         )
         .order_by(Activity.start_time_utc)
         .all()
     )
 
-    # Organize and annotate
+    # Now apply the *true* week membership test using activity-local date
     activities_by_day = defaultdict(list)
-    activities_data = []
-    for a in activities:
+    activities = []
+    for a in candidate_activities:
         day = get_local_date_for_activity(a)
-        activities_by_day[day].append(a)
-        activities_data.append(a)
+        if day is None:
+            continue
+        if start_of_week <= day <= end_of_week:
+            activities_by_day[day].append(a)
+            activities.append(a)
+
 
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
@@ -224,16 +239,27 @@ def get_dashboard_context(week_offset=0):
     # Get previous week summaries
     previous_week_start = start_of_week - timedelta(weeks=1)
     previous_week_end = end_of_week - timedelta(weeks=1)
-    previous_activities = (
+    prev_start_utc_s, prev_end_utc_excl_s = _utc_bounds_for_local_week(previous_week_start, previous_week_end)
+
+    previous_candidates = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
             TrainingLogData.isTraining == 1,
-            func.date(Activity.start_time_utc).between(previous_week_start, previous_week_end),
+            Activity.start_time_utc >= prev_start_utc_s,
+            Activity.start_time_utc < prev_end_utc_excl_s,
         )
         .order_by(Activity.start_time_utc)
         .all()
     )
+
+    previous_activities = []
+    for a in previous_candidates:
+        day = get_local_date_for_activity(a)
+        if day is None:
+            continue
+        if previous_week_start <= day <= previous_week_end:
+            previous_activities.append(a)
 
     previous_week_summary = summarize_activities(previous_activities)
 

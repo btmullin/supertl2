@@ -55,7 +55,7 @@
             <tbody>
               <tr>
                 <th>Start Time</th>
-                <td>{{ canonical_activity.start_time_utc | localtime | pretty_datetime }}</td>
+                <td>{{ canonical_activity | activity_localtime | pretty_datetime }}</td>
               </tr>
               <tr>
                 <th>Sport</th>

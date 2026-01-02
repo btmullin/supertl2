@@ -82,7 +82,7 @@
       {% for activity in activities %}
       <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" class="row-clickable">
         <td class="col-date-time">
-          {{ activity.start_time_utc | localtime | pretty_datetime }}
+          {{ activity | activity_localtime | pretty_datetime }}
         </td>
         <td class="col-sport">
           {{ activity | displaySportOrCategory }}

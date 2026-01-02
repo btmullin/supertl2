@@ -13,6 +13,10 @@ class Activity(BaseModel):
     start_time_utc = Column(String, nullable=False)
     end_time_utc = Column(String, nullable=True)
 
+    tz_name = Column(String, nullable=True)
+    utc_offset_minutes = Column(Integer, nullable=True)
+    tz_source = Column(String, nullable=True)
+    
     elapsed_time_s = Column(Integer, nullable=True)
     moving_time_s = Column(Integer, nullable=True)
     distance_m = Column(Float, nullable=True)

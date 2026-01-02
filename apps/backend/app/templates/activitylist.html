@@ -26,7 +26,7 @@
       </thead>
       {% for activity, training_log in activities %}
         <tr onclick="window.location='{{ url_for('views.edit_activity', id=activity.id, next=request.full_path) }}'" class="row-clickable">
-          <td class="col-date-time">{{ activity.start_time_utc | localtime | pretty_datetime }}</td>
+          <td class="col-date-time">{{ activity | activity_localtime | pretty_datetime }}</td>
           <td class="col-sport">{{ activity.sport }}</td>
           <td class="col-name">{{ activity.name }}</td>
           <td class="col-distance">{{ activity.distance_m | km }}</td>
