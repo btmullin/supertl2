@@ -73,7 +73,7 @@ def get_local_date_for_activity(a):
     Activity-local calendar date for the activity's start time.
 
     Canonical Activity: uses start_time_utc + tz_name (fallback HOME_TZ_NAME)
-    StravaActivity: uses startDateTime assumed UTC, converted to HOME_TZ_NAME
+    StravaActivity (legacy): uses startDateTime assumed UTC, converted to HOME_TZ_NAME
     """
     # Canonical Activity path
     utc_text = getattr(a, "start_time_utc", None)
@@ -84,9 +84,12 @@ def get_local_date_for_activity(a):
     # StravaActivity path (legacy)
     dt = getattr(a, "startDateTime", None)
     if isinstance(dt, datetime):
+        # Treat naive as UTC (legacy behavior)
         dt_utc = dt if dt.tzinfo else dt.replace(tzinfo=UTC_TZ)
-        # If you still want viewer-home grouping for legacy StravaActivity:
-        return dt_utc.astimezone(ZoneInfo(HOME_TZ_NAME)).date()
+        # Reuse helper to keep behavior consistent
+        # Convert dt_utc back to the same UTC text format your helper expects
+        utc_text = dt_utc.astimezone(UTC_TZ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return utc_text_to_local_date(utc_text, HOME_TZ_NAME)
 
     return None
 
