@@ -1,0 +1,16 @@
+/* Keep left + right on the same row */
+.edit-activity-row {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+/* CRITICAL: allow the left column to shrink instead of forcing the row wider */
+.edit-activity-row > .flex-1.minw-300 {
+  min-width: 0; /* overrides the “min-content” sizing behavior */
+}
+
+/* Prevent long/unbroken description text from blowing out the column width */
+.edit-activity-row .styled-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
