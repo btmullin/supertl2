@@ -48,6 +48,7 @@ from app.services.calendar import (
 )
 from app.services.timezones import activity_local_dt
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
+from util.canonical.backfill_activity_timezones_util import backfill_activity_timezones, HOME_TZ
 from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .forms.ActivityQueryForm import ActivityQueryFilterForm
@@ -601,6 +602,7 @@ def import_strava():
 
     from apps.backend.app.db.db import STL_DB
     result = backfill_new_strava(db_path=STL_DB)
+    backfill_activity_timezones(db_path=STL_DB, assumed_tz=HOME_TZ, force=False)
 
     flash(f"Imported new activities.")
     return redirect(url_for("views.activitylist"))
