@@ -44,7 +44,8 @@ from app.services.seasons import (
 )
 from app.services.calendar import (
     get_calendar_year_overview,
-    get_calendar_month_overview
+    get_calendar_month_overview,
+    get_available_years
 )
 from app.services.timezones import activity_local_dt
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
@@ -328,6 +329,10 @@ def calendar_view():
         )
 
     # default: year
+    available_years = get_available_years(use_local=True)
+    if available_years and year not in available_years:
+        # pick a sane default: most recent year with data
+        year = available_years[-1]
     data = get_calendar_year_overview(year=year, use_local=True)
     return render_template(
         "calendar_year.html",
@@ -335,7 +340,8 @@ def calendar_view():
         year_totals=data["year_totals"],
         months=data["months"],
         now_month=today.month,
-        now_year=today.year
+        now_year=today.year,
+        available_years=available_years,
     )
 
 

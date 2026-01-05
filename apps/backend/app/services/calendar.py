@@ -10,6 +10,7 @@ from sqlalchemy import func
 from ..db.base import sqla_db
 from ..models import Activity, TrainingLogData
 from ..services.dates import start_of_week, week_offset_for_date
+from ..services.analytics import get_local_date_for_activity
 
 
 def _local_day_expr_from_offset_minutes(utc_text_col, offset_minutes_col):
@@ -302,3 +303,34 @@ def get_calendar_month_overview(year: int, month: int, use_local: bool = True):
         },
         "weeks": weeks,
     }
+
+def get_available_years(use_local: bool = True):
+    # Pull only activities that count for your calendar (same rule as your other views)
+    q = (
+        sqla_db.session.query(Activity)
+        .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
+        .filter(TrainingLogData.isTraining == 1)
+    )
+
+    years = set()
+
+    if use_local:
+        # Compute by activity-local date (best match to what users see)
+        for a in q:
+            d = get_local_date_for_activity(a)
+            if d:
+                years.add(d.year)
+    else:
+        # Fast + pure SQL (UTC year)
+        years = set(
+            int(y) for (y,) in (
+                sqla_db.session.query(func.strftime("%Y", Activity.start_time_utc))
+                .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
+                .filter(TrainingLogData.isTraining == 1)
+                .distinct()
+                .all()
+            )
+            if y is not None
+        )
+
+    return sorted(years)

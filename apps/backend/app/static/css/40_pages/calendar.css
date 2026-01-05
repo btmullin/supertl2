@@ -390,3 +390,30 @@
   font-size: 0.9rem;
   opacity: 0.8;
 }
+
+.cal-nav-btn.is-disabled {
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.cal-year-picker {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem; /* match .cal-nav-btn */
+  margin: 0;
+}
+
+.cal-year-select {
+  box-sizing: border-box; /* height includes border */
+  height: 2rem;
+  padding: 0 0.65rem;
+  margin: 0;
+  line-height: 1;
+  font: inherit;
+  font-weight: 600;
+
+  border-radius: var(--theme-corner-radius);
+  border: 1px solid var(--theme-color-accent-light);
+  background: var(--theme-background-color-light);
+  color: var(--theme-color-accent);
+}
