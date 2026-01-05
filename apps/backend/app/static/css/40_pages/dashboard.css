@@ -14,3 +14,16 @@
   flex: 1;
   min-width: 260px;
 }
+
+/* Day-of-week cell: make date present but subtle */
+.col-date .dow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.col-date .dow-date {
+  font-size: 0.75em;
+  opacity: 0.45;
+  white-space: nowrap;
+}
