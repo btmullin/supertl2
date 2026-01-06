@@ -5,11 +5,10 @@ find_overlapping_training_activities.py
 Scan canonical activities that have TrainingLogData.isTraining = 1 and report
 overlapping time intervals to help find duplicates.
 
-Assumptions:
-- activity.start_time_utc is ISO8601 UTC like '2025-08-29T19:24:52Z'
-- activity.end_time_utc may be NULL
-- if end_time_utc is NULL and elapsed_time_s is present, end = start + elapsed_time_s
-- TrainingLogData.canonical_activity_id references activity.id
+NEW:
+- Optional ignore list of canonical activity IDs to exclude from comparisons.
+  Use --ignore-file path/to/ignore.txt
+  Format: one integer activity id per line (blank lines OK, '#' comments OK).
 """
 
 from __future__ import annotations
@@ -74,6 +73,44 @@ def overlaps(a: Interval, b: Interval, *, tolerance_s: int = 0, min_overlap_s: i
     if delta >= min_overlap_s:
         return True, int(delta)
     return False, 0
+
+
+def load_ignore_ids(path: Optional[str]) -> Set[int]:
+    """
+    Reads a text file of canonical activity IDs to ignore.
+    File format:
+      - one integer per line
+      - blank lines ok
+      - lines beginning with # are comments
+      - inline comments allowed: 12345  # reason
+    """
+    if not path:
+        return set()
+
+    ignore: Set[int] = set()
+    bad_lines: List[str] = []
+
+    with open(path, "r", encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            # strip inline comments
+            if "#" in line:
+                line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            try:
+                ignore.add(int(line))
+            except ValueError:
+                bad_lines.append(raw.rstrip("\n"))
+
+    if bad_lines:
+        print(f"[warn] Ignore file had {len(bad_lines)} unparsable line(s). Example:")
+        for ex in bad_lines[:5]:
+            print(f"       {ex!r}")
+
+    return ignore
 
 
 def fetch_training_intervals(conn: sqlite3.Connection) -> List[Interval]:
@@ -150,7 +187,7 @@ def find_overlapping_pairs(
     """
     pairs: List[Tuple[Interval, Interval, int]] = []
 
-    # Active list stores indices of intervals whose end is >= current start (within tolerance).
+    # Active list stores intervals whose end is >= current start (within tolerance).
     active: List[Interval] = []
 
     for cur in intervals:
@@ -213,6 +250,8 @@ def interval_by_id(intervals: List[Interval]) -> Dict[int, Interval]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("db", help="Path to your sqlite database (e.g., supertl2.db)")
+    ap.add_argument("--ignore-file", default=None,
+                    help="Optional path to a text file of canonical activity IDs to ignore (one id per line).")
     ap.add_argument("--tolerance-s", type=int, default=0,
                     help="Expand intervals by this many seconds on both ends (helps catch near-duplicates). Default 0.")
     ap.add_argument("--min-overlap-s", type=int, default=60,
@@ -223,15 +262,29 @@ def main() -> int:
                     help="Optional path to write overlapping pairs as CSV.")
     args = ap.parse_args()
 
+    ignore_ids = load_ignore_ids(args.ignore_file)
+    if ignore_ids:
+        print(f"[note] Loaded {len(ignore_ids)} ignore id(s) from {args.ignore_file}")
+
     conn = sqlite3.connect(args.db)
     intervals = fetch_training_intervals(conn)
     if not intervals:
         print("No training-linked canonical activities found (TrainingLogData.isTraining=1).")
         return 0
 
+    # Apply ignore list
+    if ignore_ids:
+        before = len(intervals)
+        intervals = [it for it in intervals if it.activity_id not in ignore_ids]
+        removed = before - len(intervals)
+        print(f"[note] Ignored {removed} interval(s) present in DB based on ignore file.")
+        if not intervals:
+            print("All intervals were ignored; nothing to compare.")
+            return 0
+
     pairs = find_overlapping_pairs(intervals, tolerance_s=args.tolerance_s, min_overlap_s=args.min_overlap_s)
 
-    print(f"Training-linked canonical activities: {len(intervals)}")
+    print(f"Training-linked canonical activities considered: {len(intervals)}")
     print(f"Overlapping pairs (>= {args.min_overlap_s}s, tol={args.tolerance_s}s): {len(pairs)}")
 
     # Sort pairs: biggest overlap first, then earlier start
