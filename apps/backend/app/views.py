@@ -330,6 +330,7 @@ def calendar_view():
 
     # default: year
     available_years = get_available_years(use_local=True)
+    available_years = sorted(available_years, reverse=True)
     if available_years and year not in available_years:
         # pick a sane default: most recent year with data
         year = available_years[-1]
