@@ -8,8 +8,8 @@
       <h1 class="calendar-h1">Training Calendar</h1>
 
       <div class="calendar-year-nav">
-        {% set min_year = available_years[0] if available_years else year %}
-        {% set max_year = available_years[-1] if available_years else year %}
+        {% set min_year = available_years | min if available_years else year %}
+        {% set max_year = available_years | max if available_years else year %}
 
         <a class="cal-nav-btn {% if year <= min_year %}is-disabled{% endif %}"
           href="{{ url_for('views.calendar_view', view='year', year=year-1) }}">&lsaquo;</a>
