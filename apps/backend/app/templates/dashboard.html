@@ -4,7 +4,19 @@
   <div class="section">
     <div class="week-nav">
       <span>
-        Week of {{ start_of_week.strftime('%B %d, %Y') }}
+        Week of 
+        <a href="{{ url_for('views.calendar_view',
+                            view='month',
+                            year=start_of_week.year,
+                            month=start_of_week.month) }}">
+          {{ start_of_week.strftime('%B') }}
+        </a>
+        {{ start_of_week.strftime('%d') }},
+        <a href="{{ url_for('views.calendar_view',
+                            view='year',
+                            year=start_of_week.year) }}">
+          {{ start_of_week.year }}
+        </a>
       </span>
       <a href="{{ url_for('views.dashboard', week_offset=week_offset - 1) }}">&laquo; Previous Week</a>
       <a href="{{ url_for('views.dashboard', week_offset=week_offset + 1) }}">Next Week &raquo;</a>
