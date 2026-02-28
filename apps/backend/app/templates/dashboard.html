@@ -1,4 +1,6 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+{% from "_health_macros.html" import health_chips %}
+{% block content %}
 <div class="whole-body">
   <!-- Navigation -->
   <div class="section">
@@ -49,6 +51,8 @@
                     {{ day.strftime('%A') }}
                     <span class="dow-date">{{ day.strftime('%b %-d') }}</span>
                   </div>
+                  {% set dh = health_by_day.get(day.isoformat()) %}
+                  {{ health_chips(day, dh) }}
                 </td>
                 <td colspan="5"></td>
               </tr>
@@ -61,6 +65,8 @@
                     {{ day.strftime('%A') }}
                     <span class="dow-date">{{ day.strftime('%b %-d') }}</span>
                   </div>
+                  {% set dh = health_by_day.get(day.isoformat()) %}
+                  {{ health_chips(day, dh) }}
                 </td>
                 <td class="col-sport">{{ activity | displaySportOrCategory }}</td>
                 <td class="col-name">{{ activity.name }}</td>
@@ -75,6 +81,8 @@
                     {{ day.strftime('%A') }}
                     <span class="dow-date">{{ day.strftime('%b %-d') }}</span>
                   </div>
+                  {% set dh = health_by_day.get(day.isoformat()) %}
+                  {{ health_chips(day, dh) }}
                 </td>
                 <td colspan="2"></td>
                 <td class="col-distance-summary">{{ daily_summaries[day].total_distance | km }}</td>
@@ -246,4 +254,65 @@
     });
   })();
 </script>
+
+<dialog id="healthDialog">
+  <form method="post" action="{{ url_for('views.upsert_daily_health') }}">
+    <input type="hidden" name="date_local" id="health_date_local">
+
+    <label>Weight (lb)
+      <input type="number" step="0.1" name="weight_lbs">
+    </label>
+
+    <label>Body Fat (%)
+      <input type="number" step="0.1" name="body_fat_pct">
+    </label>
+
+    <label>Resting HR
+      <input type="number" step="1" name="resting_hr_bpm">
+    </label>
+
+    <label>HRV
+      <input type="number" step="1" name="hrv_ms">
+    </label>
+
+    <label>Food Quality (1–5)
+      <select name="food_quality_score">
+        <option value=""></option>
+        {% for i in range(1,6) %}
+        <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Notes
+      <textarea name="notes"></textarea>
+    </label>
+
+    <button type="submit">Save</button>
+    <button type="button" onclick="closeHealthModal()">Cancel</button>
+  </form>
+</dialog>
+
+<script>
+function openHealthModalFromEl(el) {
+  const date = el.dataset.date;
+  document.getElementById('health_date_local').value = date;
+
+  // Fill fields
+  document.querySelector('#healthDialog [name="weight_lbs"]').value =
+    el.dataset.weight_lbs || '';
+  document.querySelector('#healthDialog [name="body_fat_pct"]').value = el.dataset.body_fat_pct || '';
+  document.querySelector('#healthDialog [name="resting_hr_bpm"]').value = el.dataset.resting_hr_bpm || '';
+  document.querySelector('#healthDialog [name="hrv_ms"]').value = el.dataset.hrv_ms || '';
+  document.querySelector('#healthDialog [name="food_quality_score"]').value = el.dataset.food_quality_score || '';
+  document.querySelector('#healthDialog [name="notes"]').value = el.dataset.notes || '';
+
+  document.getElementById('healthDialog').showModal();
+}
+
+function closeHealthModal() {
+  document.getElementById('healthDialog').close();
+}
+</script>
+
 {% endblock %}
