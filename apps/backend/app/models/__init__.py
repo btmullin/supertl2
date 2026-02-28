@@ -7,5 +7,17 @@ from .activity import Activity
 from .activitysource import ActivitySource
 from .sporttracksactivity import SportTracksActivity
 from .season import Season
+from .dailyhealth import DailyHealth
 
-__all__ = ['StravaActivity', 'TrainingLogData', 'WorkoutType', 'Category','StravaActivityStream', 'Activity', 'ActivitySource', 'SportTracksActivity', 'Season']
+__all__ = [
+    "StravaActivity",
+    "TrainingLogData",
+    "WorkoutType",
+    "Category",
+    "StravaActivityStream",
+    "Activity",
+    "ActivitySource",
+    "SportTracksActivity",
+    "Season",
+    "DailyHealth",
+]
