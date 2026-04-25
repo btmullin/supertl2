@@ -27,3 +27,26 @@
   opacity: 0.45;
   white-space: nowrap;
 }
+
+/* Health chips: small badges showing health data for the day */
+.health-chips {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.6rem;
+}
+
+.health-chip {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--theme-color-primary-light);
+  color: var(--theme-color-accent);
+  font-weight: 600;
+}
+
+.health-chip-muted {
+  opacity: 0.6;
+  font-style: italic;
+  cursor: pointer;
+}

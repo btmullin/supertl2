@@ -1,0 +1,38 @@
+{# templates/_health_macros.html #}
+
+{% macro health_chips(day, dh) %}
+<div class="health-chips"
+     data-date="{{ day.isoformat() }}"
+     data-weight_lbs="{{ (dh.weight_kg * 2.20462) | round(1) if dh and dh.weight_kg else '' }}"
+     data-body_fat_pct="{{ dh.body_fat_pct if dh and dh.body_fat_pct is not none else '' }}"
+     data-resting_hr_bpm="{{ dh.resting_hr_bpm if dh and dh.resting_hr_bpm is not none else '' }}"
+     data-hrv_ms="{{ dh.hrv_ms if dh and dh.hrv_ms is not none else '' }}"
+     data-food_quality_score="{{ dh.food_quality_score if dh and dh.food_quality_score is not none else '' }}"
+     data-notes="{{ dh.notes|e if dh and dh.notes else '' }}"
+     onclick="event.stopPropagation(); openHealthModalFromEl(this)">
+    {% if dh %}
+      {# Always show an edit affordance if the row exists #}
+      <span class="health-chip health-chip-muted">✎</span>
+
+      {% if dh.weight_kg %}
+        <span class="health-chip">
+          {{ (dh.weight_kg * 2.20462) | round(1) }} lb
+        </span>
+      {% endif %}
+      {% if dh.body_fat_pct %}
+        <span class="health-chip">BF {{ dh.body_fat_pct | round(1) }}%</span>
+      {% endif %}
+      {% if dh.resting_hr_bpm %}
+        <span class="health-chip">RHR {{ dh.resting_hr_bpm | int }}</span>
+      {% endif %}
+      {% if dh.hrv_ms %}
+        <span class="health-chip">HRV {{ dh.hrv_ms | int }}</span>
+      {% endif %}
+      {% if dh.food_quality_score %}
+        <span class="health-chip">FQ {{ dh.food_quality_score }}</span>
+      {% endif %}
+    {% else %}
+      <span class="health-chip health-chip-muted">+ health</span>
+    {% endif %}
+  </div>
+{% endmacro %}

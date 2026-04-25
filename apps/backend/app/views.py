@@ -54,7 +54,16 @@ from .forms.EditActivityForm import EditActivityForm
 from .forms.CategoryForm import CategoryForm
 from .forms.ActivityQueryForm import ActivityQueryFilterForm
 from .forms.season_forms import SeasonCreateForm
-from .models import StravaActivity, WorkoutType, TrainingLogData, Category, Activity, SportTracksActivity, Season
+from .models import (
+    StravaActivity,
+    WorkoutType,
+    TrainingLogData,
+    Category,
+    Activity,
+    SportTracksActivity,
+    Season,
+    DailyHealth
+)
 from .db.base import sqla_db
 from .filters import category_path_filter
 
@@ -239,6 +248,15 @@ def get_dashboard_context(week_offset=0):
 
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
+    health_rows = (
+        sqla_db.session.query(DailyHealth)
+        .filter(DailyHealth.date_local >= start_of_week.isoformat(),
+                DailyHealth.date_local <= end_of_week.isoformat())
+        .all()
+    )
+
+    health_by_day = {row.date_local: row for row in health_rows}
+
     daily_summaries = {
         day: summarize_activities(activities_by_day[day])
         for day in days
@@ -293,6 +311,7 @@ def get_dashboard_context(week_offset=0):
         "weekly_series": weekly_series,
         "days": days,
         "week_offset": week_offset,
+        "health_by_day": health_by_day,
     }
 
 @views.route("/")
@@ -305,6 +324,44 @@ def dashboard():
         "dashboard.html",
         **context
     )
+
+@views.route("/daily-health/upsert", methods=["POST"])
+def upsert_daily_health():
+    date_local = request.form.get("date_local")
+
+    row = (
+        sqla_db.session.query(DailyHealth)
+        .filter_by(date_local=date_local)
+        .one_or_none()
+    )
+
+    if row is None:
+        row = DailyHealth(date_local=date_local)
+        sqla_db.session.add(row)
+
+    def f(name):
+        v = request.form.get(name)
+        return float(v) if v else None
+
+    lbs = request.form.get("weight_lbs")
+    if lbs:
+        try:
+            row.weight_kg = float(lbs) / 2.20462
+        except ValueError:
+            row.weight_kg = None
+    else:
+        row.weight_kg = None
+    row.body_fat_pct = f("body_fat_pct")
+    row.resting_hr_bpm = f("resting_hr_bpm")
+    row.hrv_ms = f("hrv_ms")
+
+    fq = request.form.get("food_quality_score")
+    row.food_quality_score = int(fq) if fq else None
+
+    row.notes = request.form.get("notes") or None
+
+    sqla_db.session.commit()
+    return redirect(request.referrer or url_for("views.dashboard"))
 
 @views.route("/calendar")
 def calendar_view():

@@ -298,3 +298,37 @@ CREATE TABLE IF NOT EXISTS Season (
 
 CREATE UNIQUE INDEX IF NOT EXISTS ix_season_name ON Season(name);
 CREATE INDEX IF NOT EXISTS ix_season_start_end ON Season(start_date, end_date);
+
+-- ============================================================================
+-- Athelete health / wellness data
+-- ============================================================================
+
+-- One row per day, containing daily health metrics (weight, body fat, resting HR, HRV) keyed by local date.
+CREATE TABLE daily_health (
+  id INTEGER PRIMARY KEY,
+
+  date_local TEXT NOT NULL UNIQUE,  -- YYYY-MM-DD (home/viewer local date)
+
+  weight_kg REAL,
+  body_fat_pct REAL,
+  resting_hr_bpm REAL,
+  hrv_ms REAL,
+
+  food_quality_score INTEGER,  -- 1-5 scale
+
+  notes TEXT,
+
+  created_at_utc TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  updated_at_utc TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+
+CREATE INDEX ix_daily_health_date ON daily_health(date_local);
+
+CREATE TRIGGER trg_daily_health_mtime
+AFTER UPDATE ON daily_health
+FOR EACH ROW
+BEGIN
+  UPDATE daily_health
+    SET updated_at_utc = (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  WHERE id = OLD.id;
+END;
