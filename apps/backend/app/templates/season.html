@@ -518,8 +518,28 @@
       // delta only where both exist
       const delta = p.map((pv, i) => (pv == null || r[i] == null) ? null : (pv - r[i]));
 
-    const currentWeek = overlay.primary_current_week || null; // 1-based
-    const currentIdx = currentWeek ? currentWeek - 1 : null;
+      const currentWeek = overlay.primary_current_week || null; // 1-based
+      const currentIdx = currentWeek ? currentWeek - 1 : null;
+
+      // Get min and max deltas through current week
+      let deltaYAxisMin = null;
+      let deltaYAxisMax = null;
+
+      if (currentIdx != null) {
+        const deltasThruCurrent = delta.slice(0, currentIdx + 1).filter(v => v != null);
+        if (deltasThruCurrent.length > 0) {
+          const minDelta = Math.min(...deltasThruCurrent);
+          const maxDelta = Math.max(...deltasThruCurrent);
+          
+          // Calculate range and add 20% buffer
+          const range = Math.max(Math.abs(minDelta), Math.abs(maxDelta));
+          const buffer = range * 0.2;
+          deltaYAxisMin = minDelta - buffer;
+          deltaYAxisMax = maxDelta + buffer;
+          
+          console.log('DEBUG delta bounds:', { minDelta, maxDelta, range, buffer, deltaYAxisMin, deltaYAxisMax });
+        }
+      }
 
     const baseBar = "rgba(201, 203, 207, 0.85)";
     const futureBar = "rgba(201, 203, 207, 0.25)";
@@ -573,6 +593,7 @@
             x: { grid: { display: false } },
             y: {
               title: { display: true, text: "Hours ahead (+) / behind (−)" },
+              ...(deltaYAxisMin !== null && deltaYAxisMax !== null && { min: deltaYAxisMin, max: deltaYAxisMax }),
               ticks: {
                 callback: (value) => `${value} h`
               }
