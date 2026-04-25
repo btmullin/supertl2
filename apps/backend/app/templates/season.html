@@ -386,6 +386,11 @@
         });
       });
 
+      // Calculate max value from primary season data to clip the scale for readability
+      const primaryData = seriesToData(primary);
+      const primaryMax = Math.max(...primaryData.filter(v => v != null));
+      const yAxisMax = primaryMax > 0 ? primaryMax * 1.2 : 100; // 20% buffer above primary season max
+
       // Vertical marker at the selected season's current week (boundary)
       const weekMarkerPlugin = {
         id: 'weekMarkerPlugin',
@@ -461,7 +466,7 @@
             }
           },
           scales: {
-            y: { beginAtZero: true, title: { display: true, text: "Hours" } },
+            y: { beginAtZero: true, max: yAxisMax, title: { display: true, text: "Hours" } },
             x: { title: { display: true, text: "Season week" } }
           }
         },
