@@ -344,6 +344,20 @@
 {% if overlay %}
   <script>
     (function () {
+      // Helper to round to nice round numbers
+      function roundToNiceNumber(value, roundUp = true) {
+        if (value === 0) return 0;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))));
+        const normalized = value / magnitude;
+        let rounded;
+        if (roundUp) {
+          rounded = Math.ceil(normalized * 2) / 2; // round to nearest 0.5
+        } else {
+          rounded = Math.floor(normalized * 2) / 2;
+        }
+        return rounded * magnitude;
+      }
+
       const overlay = {{ overlay | tojson }};
       const canvas = document.getElementById("seasonOverlayChart");
       if (!overlay || !canvas) return;
@@ -403,6 +417,7 @@
       }
       
       const yAxisMax = projectedMax > 0 ? projectedMax * 1.2 : 100; // 20% buffer above projected total
+      const yAxisMaxRounded = roundToNiceNumber(yAxisMax, true);
 
       // Vertical marker at the selected season's current week (boundary)
       const weekMarkerPlugin = {
@@ -479,7 +494,7 @@
             }
           },
           scales: {
-            y: { beginAtZero: true, max: yAxisMax, title: { display: true, text: "Hours" } },
+            y: { beginAtZero: true, max: yAxisMaxRounded, title: { display: true, text: "Hours" } },
             x: { title: { display: true, text: "Season week" } }
           }
         },
@@ -489,6 +504,20 @@
   </script>
   <script>
     (function () {
+      // Helper to round to nice round numbers
+      function roundToNiceNumber(value, roundUp = true) {
+        if (value === 0) return 0;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))));
+        const normalized = value / magnitude;
+        let rounded;
+        if (roundUp) {
+          rounded = Math.ceil(normalized * 2) / 2; // round to nearest 0.5
+        } else {
+          rounded = Math.floor(normalized * 2) / 2;
+        }
+        return rounded * magnitude;
+      }
+
       const overlay = {{ overlay | tojson }};
       const canvas = document.getElementById("seasonDeltaChart");
       if (!overlay || !canvas) return;
@@ -534,8 +563,8 @@
           // Calculate range and add 20% buffer
           const range = Math.max(Math.abs(minDelta), Math.abs(maxDelta));
           const buffer = range * 0.2;
-          deltaYAxisMin = minDelta - buffer;
-          deltaYAxisMax = maxDelta + buffer;
+          deltaYAxisMin = roundToNiceNumber(minDelta - buffer, false); // round down
+          deltaYAxisMax = roundToNiceNumber(maxDelta + buffer, true);  // round up
           
           console.log('DEBUG delta bounds:', { minDelta, maxDelta, range, buffer, deltaYAxisMin, deltaYAxisMax });
         }
