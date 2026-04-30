@@ -344,6 +344,20 @@
 {% if overlay %}
   <script>
     (function () {
+      // Helper to round to nice round numbers
+      function roundToNiceNumber(value, roundUp = true) {
+        if (value === 0) return 0;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))));
+        const normalized = value / magnitude;
+        let rounded;
+        if (roundUp) {
+          rounded = Math.ceil(normalized * 2) / 2; // round to nearest 0.5
+        } else {
+          rounded = Math.floor(normalized * 2) / 2;
+        }
+        return rounded * magnitude;
+      }
+
       const overlay = {{ overlay | tojson }};
       const canvas = document.getElementById("seasonOverlayChart");
       if (!overlay || !canvas) return;
@@ -385,6 +399,25 @@
           spanGaps: true
         });
       });
+
+      // Calculate max value from primary season data to clip the scale for readability
+      const primaryData = seriesToData(primary);
+      const primaryMax = Math.max(...primaryData.filter(v => v != null));
+      
+      // Project 4 weeks out based on weekly average for THIS season only
+      const actualWeeks = (primary.weeks || []).filter(w => w.cumulative_hours != null);
+      
+      let projectedMax = primaryMax;
+      if (overlay.primary_current_week && actualWeeks.length > 0) {
+        const lastWeek = actualWeeks[actualWeeks.length - 1];
+        const currentWeekNum = overlay.primary_current_week;
+        const weeklyAvg = lastWeek.cumulative_hours / currentWeekNum;
+        projectedMax = lastWeek.cumulative_hours + (weeklyAvg * 4);
+        
+      }
+      
+      const yAxisMax = projectedMax > 0 ? projectedMax * 1.2 : 100; // 20% buffer above projected total
+      const yAxisMaxRounded = roundToNiceNumber(yAxisMax, true);
 
       // Vertical marker at the selected season's current week (boundary)
       const weekMarkerPlugin = {
@@ -461,7 +494,7 @@
             }
           },
           scales: {
-            y: { beginAtZero: true, title: { display: true, text: "Hours" } },
+            y: { beginAtZero: true, max: yAxisMaxRounded, title: { display: true, text: "Hours" } },
             x: { title: { display: true, text: "Season week" } }
           }
         },
@@ -471,6 +504,20 @@
   </script>
   <script>
     (function () {
+      // Helper to round to nice round numbers
+      function roundToNiceNumber(value, roundUp = true) {
+        if (value === 0) return 0;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))));
+        const normalized = value / magnitude;
+        let rounded;
+        if (roundUp) {
+          rounded = Math.ceil(normalized * 2) / 2; // round to nearest 0.5
+        } else {
+          rounded = Math.floor(normalized * 2) / 2;
+        }
+        return rounded * magnitude;
+      }
+
       const overlay = {{ overlay | tojson }};
       const canvas = document.getElementById("seasonDeltaChart");
       if (!overlay || !canvas) return;
@@ -500,8 +547,28 @@
       // delta only where both exist
       const delta = p.map((pv, i) => (pv == null || r[i] == null) ? null : (pv - r[i]));
 
-    const currentWeek = overlay.primary_current_week || null; // 1-based
-    const currentIdx = currentWeek ? currentWeek - 1 : null;
+      const currentWeek = overlay.primary_current_week || null; // 1-based
+      const currentIdx = currentWeek ? currentWeek - 1 : null;
+
+      // Get min and max deltas through current week
+      let deltaYAxisMin = null;
+      let deltaYAxisMax = null;
+
+      if (currentIdx != null) {
+        const deltasThruCurrent = delta.slice(0, currentIdx + 1).filter(v => v != null);
+        if (deltasThruCurrent.length > 0) {
+          const minDelta = Math.min(...deltasThruCurrent);
+          const maxDelta = Math.max(...deltasThruCurrent);
+          
+          // Calculate range and add 20% buffer
+          const range = Math.max(Math.abs(minDelta), Math.abs(maxDelta));
+          const buffer = range * 0.2;
+          deltaYAxisMin = roundToNiceNumber(minDelta - buffer, false); // round down
+          deltaYAxisMax = roundToNiceNumber(maxDelta + buffer, true);  // round up
+          
+          console.log('DEBUG delta bounds:', { minDelta, maxDelta, range, buffer, deltaYAxisMin, deltaYAxisMax });
+        }
+      }
 
     const baseBar = "rgba(201, 203, 207, 0.85)";
     const futureBar = "rgba(201, 203, 207, 0.25)";
@@ -555,6 +622,7 @@
             x: { grid: { display: false } },
             y: {
               title: { display: true, text: "Hours ahead (+) / behind (−)" },
+              ...(deltaYAxisMin !== null && deltaYAxisMax !== null && { min: deltaYAxisMin, max: deltaYAxisMax }),
               ticks: {
                 callback: (value) => `${value} h`
               }
