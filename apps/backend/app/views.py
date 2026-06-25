@@ -215,6 +215,107 @@ def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_aft
 
     return {"weeks": weeks, "current_index": current_index}
 
+def build_category_rollup_summary(activities, *, collapse_single_child_chains=True):
+    """
+    Inclusive category roll-up.
+
+    Shows a category row when:
+    - it has direct activities, OR
+    - it combines multiple active child branches, OR
+    - it is a leaf with activity
+
+    If collapse_single_child_chains=True, hides boring parent rows like:
+      Running
+        Trail Running
+    when Running has no direct activities and only one active child.
+    """
+    if not activities:
+        return []
+
+    direct_groups = defaultdict(list)
+    for a in activities:
+        cid = group_by_category_id(a)
+        direct_groups[cid].append(a)
+
+    cats = sqla_db.session.query(Category.id, Category.parent_id, Category.name).all()
+
+    children = defaultdict(list)
+    name_lookup = {}
+    parent_lookup = {}
+
+    for cid, parent_id, name in cats:
+        children[parent_id].append(cid)
+        name_lookup[cid] = name
+        parent_lookup[cid] = parent_id
+
+    def gather(root_cid):
+        stack = [root_cid]
+        acc = []
+        while stack:
+            current = stack.pop()
+            acc.extend(direct_groups.get(current, []))
+            stack.extend(children.get(current, []))
+        return acc
+
+    inclusive_acts = {}
+    for cid in name_lookup:
+        acts = gather(cid)
+        if acts:
+            inclusive_acts[cid] = acts
+
+    rows = []
+
+    def add_rows(parent_id, depth):
+        active_children = [
+            cid for cid in children.get(parent_id, [])
+            if cid in inclusive_acts
+        ]
+
+        active_children.sort(key=lambda cid: name_lookup.get(cid, ""))
+
+        for cid in active_children:
+            direct_count = len(direct_groups.get(cid, []))
+            child_active_count = len([
+                child_id for child_id in children.get(cid, [])
+                if child_id in inclusive_acts
+            ])
+
+            is_leaf = child_active_count == 0
+            should_show = (
+                direct_count > 0
+                or child_active_count != 1
+                or is_leaf
+                or not collapse_single_child_chains
+            )
+
+            next_depth = depth
+            if should_show:
+                rows.append({
+                    "category_id": cid,
+                    "category_name": name_lookup[cid],
+                    "summary": summarize_activities(inclusive_acts[cid]),
+                    "depth": depth,
+                    "direct_count": direct_count,
+                    "is_rollup": child_active_count > 0,
+                })
+                next_depth = depth + 1
+
+            add_rows(cid, next_depth)
+
+    add_rows(None, 0)
+
+    if direct_groups.get(None):
+        rows.append({
+            "category_id": None,
+            "category_name": "Uncategorized",
+            "summary": summarize_activities(direct_groups[None]),
+            "depth": 0,
+            "direct_count": len(direct_groups[None]),
+            "is_rollup": False,
+        })
+
+    return rows
+
 def get_dashboard_context(week_offset=0):
     today = datetime.today().date()
     start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
@@ -264,11 +365,7 @@ def get_dashboard_context(week_offset=0):
     week_summary = summarize_activities(activities)
 
     # Per-category (training-log hierarchy) summaries for this week
-    # Key is categoryId; we’ll turn that into a full path in the template.
-    category_summaries = summarize_by(
-        activities,
-        key=group_by_category_id,
-    )
+    category_rows = build_category_rollup_summary(activities)
 
     # Get previous week summaries
     previous_week_start = start_of_week - timedelta(weeks=1)
@@ -307,7 +404,7 @@ def get_dashboard_context(week_offset=0):
         "daily_summaries": daily_summaries,
         "week_summary": week_summary,
         "previous_week_summary": previous_week_summary,
-        "category_summaries": category_summaries,
+        "category_rows": category_rows,
         "weekly_series": weekly_series,
         "days": days,
         "week_offset": week_offset,
@@ -832,7 +929,7 @@ def activity_query():
 
         activities = None
         summary = None
-        category_summary = None
+        category_rows = None
         category_depths = None
         query_filter = None
 
@@ -929,85 +1026,14 @@ def activity_query():
         activities = filtered
         summary = summarize_activities(activities)
 
-        # ---- Hierarchical category summary (inclusive totals) ----
-
-        if activities:
-            acts = list(activities)
-
-            # Group activities by direct category id
-            direct_groups = defaultdict(list)
-            for a in acts:
-                cid = group_by_category_id(a)
-                direct_groups[cid].append(a)
-
-            # Load the category tree (id, parent_id)
-            cats = sqla_db.session.query(Category.id, Category.parent_id).all()
-            children = defaultdict(list)   # parent_id -> [child_id]
-            for cid, parent_id in cats:
-                children[parent_id].append(cid)
-
-            def gather_activities_for_category(root_cid: int):
-                stack = [root_cid]
-                acc = []
-                while stack:
-                    current = stack.pop()
-                    acc.extend(direct_groups.get(current, []))
-                    stack.extend(children.get(current, []))
-                return acc
-
-            raw_summary = {}
-
-            # Inclusive summary for each defined category
-            for cid, parent_id in cats:
-                cat_acts = gather_activities_for_category(cid)
-                if cat_acts:
-                    raw_summary[cid] = summarize_activities(cat_acts)
-
-            # Handle uncategorized activities (no TrainingLogData category)
-            if direct_groups.get(None):
-                raw_summary[None] = summarize_activities(direct_groups[None])
-
-            # Depth for indentation (root depth = 0)
-            category_depths = {}
-
-            def assign_depths(parent_id, depth: int):
-                for cid in children.get(parent_id, []):
-                    category_depths[cid] = depth
-                    assign_depths(cid, depth + 1)
-
-            assign_depths(None, 0)
-
-            # Order categories in tree order (parent then children)
-            name_lookup = dict(
-                sqla_db.session.query(Category.id, Category.name).all()
-            )
-            ordered = OrderedDict()
-
-            def add_with_children(parent_id):
-                for cid in sorted(children.get(parent_id, []), key=lambda x: name_lookup.get(x, "")):
-                    if cid in raw_summary:
-                        ordered[cid] = raw_summary[cid]
-                    add_with_children(cid)
-
-            add_with_children(None)
-
-            # Put uncategorized at the bottom if present
-            if None in raw_summary:
-                ordered[None] = raw_summary[None]
-
-            category_summary = ordered
-        else:
-            category_summary = None
-            category_depths = {}
+        category_rows = build_category_rollup_summary(activities)
 
     return render_template(
         "query.html",
         form=form,
         activities=activities,
         summary=summary,
-        category_summary=category_summary,
-        # if you’re using indentation; otherwise you can drop this
-        category_depths=category_depths if not show_form else None,
+        category_rows=category_rows,
         query_filter=query_filter,
     )
 
