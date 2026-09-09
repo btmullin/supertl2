@@ -42,4 +42,12 @@ def create_app():
     # Register formatting filters
     register_filters(app)
 
+    @app.context_processor
+    def inject_training_filter():
+        from .services.training_filter import get_active_filter, get_category_tree_for_filter
+        return {
+            "active_filter": get_active_filter(),
+            "filter_category_tree": get_category_tree_for_filter(),
+        }
+
     return app

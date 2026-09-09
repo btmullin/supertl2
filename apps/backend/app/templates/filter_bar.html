@@ -1,0 +1,18 @@
+<div class="filter-bar-inner d-flex align-items-center gap-2">
+  <form method="post" action="{{ url_for('views.set_training_filter') }}" class="d-flex align-items-center gap-2 mb-0">
+    <label for="filter-category-select" class="mb-0 small-text">Filter:</label>
+    <select id="filter-category-select" name="category_id" onchange="this.form.submit()" class="form-select form-select-sm w-auto">
+      <option value="">All Training</option>
+      {% for cat in filter_category_tree %}
+        <option value="{{ cat.id }}" {% if active_filter.category_id == cat.id %}selected{% endif %}>
+          {{ ('&nbsp;&nbsp;' * cat.depth) | safe }}{{ cat.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+  {% if active_filter.is_active %}
+    <form method="post" action="{{ url_for('views.clear_training_filter') }}" class="mb-0">
+      <button type="submit" class="btn btn-sm btn-link p-0">Clear filter</button>
+    </form>
+  {% endif %}
+</div>

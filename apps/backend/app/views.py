@@ -14,6 +14,7 @@ from flask import (
     redirect,
     current_app,
     flash,
+    session,
 )
 from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
@@ -48,6 +49,10 @@ from app.services.calendar import (
     get_available_years
 )
 from app.services.timezones import activity_local_dt
+from app.services.training_filter import (
+    set_active_filter,
+    clear_active_filter,
+)
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from util.canonical.backfill_activity_timezones_util import backfill_activity_timezones, HOME_TZ
 from .forms.EditActivityForm import EditActivityForm
@@ -437,6 +442,20 @@ def dashboard():
         "dashboard.html",
         **context
     )
+
+
+@views.route("/filter", methods=["POST"])
+def set_training_filter():
+    category_id = request.form.get("category_id", type=int)
+    workout_type_ids = request.form.getlist("workout_type_ids", type=int)
+    set_active_filter(category_id=category_id, workout_type_ids=workout_type_ids)
+    return redirect(request.referrer or url_for("views.dashboard"))
+
+
+@views.route("/filter/clear", methods=["POST"])
+def clear_training_filter():
+    clear_active_filter()
+    return redirect(request.referrer or url_for("views.dashboard"))
 
 @views.route("/daily-health/upsert", methods=["POST"])
 def upsert_daily_health():
