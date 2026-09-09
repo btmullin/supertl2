@@ -228,6 +228,11 @@ def build_category_rollup_summary(activities, *, collapse_single_child_chains=Tr
       Running
         Trail Running
     when Running has no direct activities and only one active child.
+
+    When ancestors are collapsed, the next visible branch/root row uses the full
+    category path so context is not lost:
+      Nordic Skiing : Roller Skiing
+        Skate
     """
     if not activities:
         return []
@@ -248,6 +253,14 @@ def build_category_rollup_summary(activities, *, collapse_single_child_chains=Tr
         name_lookup[cid] = name
         parent_lookup[cid] = parent_id
 
+    def full_path(cid):
+        parts = []
+        current = cid
+        while current is not None:
+            parts.insert(0, name_lookup[current])
+            current = parent_lookup.get(current)
+        return " : ".join(parts)
+
     def gather(root_cid):
         stack = [root_cid]
         acc = []
@@ -265,7 +278,7 @@ def build_category_rollup_summary(activities, *, collapse_single_child_chains=Tr
 
     rows = []
 
-    def add_rows(parent_id, depth):
+    def add_rows(parent_id, depth, collapsed_prefix=False):
         active_children = [
             cid for cid in children.get(parent_id, [])
             if cid in inclusive_acts
@@ -281,6 +294,7 @@ def build_category_rollup_summary(activities, *, collapse_single_child_chains=Tr
             ])
 
             is_leaf = child_active_count == 0
+
             should_show = (
                 direct_count > 0
                 or child_active_count != 1
@@ -288,26 +302,28 @@ def build_category_rollup_summary(activities, *, collapse_single_child_chains=Tr
                 or not collapse_single_child_chains
             )
 
-            next_depth = depth
             if should_show:
                 rows.append({
                     "category_id": cid,
                     "category_name": name_lookup[cid],
+                    "category_label": full_path(cid) if collapsed_prefix else name_lookup[cid],
                     "summary": summarize_activities(inclusive_acts[cid]),
                     "depth": depth,
                     "direct_count": direct_count,
                     "is_rollup": child_active_count > 0,
                 })
-                next_depth = depth + 1
 
-            add_rows(cid, next_depth)
+                add_rows(cid, depth + 1, collapsed_prefix=False)
+            else:
+                add_rows(cid, depth, collapsed_prefix=True)
 
-    add_rows(None, 0)
+    add_rows(None, 0, collapsed_prefix=False)
 
     if direct_groups.get(None):
         rows.append({
             "category_id": None,
             "category_name": "Uncategorized",
+            "category_label": "Uncategorized",
             "summary": summarize_activities(direct_groups[None]),
             "depth": 0,
             "direct_count": len(direct_groups[None]),
