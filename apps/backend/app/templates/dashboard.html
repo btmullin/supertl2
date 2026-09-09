@@ -141,15 +141,16 @@
           </tr>
         </thead>
         <tbody>
-          {% for cat_id, summary in category_summaries | dictsort %}
+          {% for row in category_rows %}
           <tr>
             <td>
-              {# Convert category id -> "Parent : Child : Leaf" using the category_path filter #}
-              {{ cat_id | category_path }}
+              <span class="category-label indent" style="--indent-level: {{ row.depth }};">
+                {{ row.category_label  }}
+              </span>
             </td>
-            <td>{{ summary.count }}</td>
-            <td class="col-time">{{ summary.total_moving_s | format_duration }}</td>
-            <td class="col-distance">{{ summary.total_distance | km }}</td>
+            <td>{{ row.summary.count }}</td>
+            <td class="col-time">{{ row.summary.total_moving_s | format_duration }}</td>
+            <td class="col-distance">{{ row.summary.total_distance | km }}</td>
           </tr>
           {% endfor %}
         </tbody>
