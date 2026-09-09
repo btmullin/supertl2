@@ -50,8 +50,10 @@ from app.services.calendar import (
 )
 from app.services.timezones import activity_local_dt
 from app.services.training_filter import (
+    get_active_filter,
     set_active_filter,
     clear_active_filter,
+    apply_filter_to_query,
 )
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from util.canonical.backfill_activity_timezones_util import backfill_activity_timezones, HOME_TZ
@@ -135,7 +137,7 @@ def _utc_bounds_for_local_date_range(start_local, end_local_inclusive):
         end_utc_excl.strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
-def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_after: int = 5):
+def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_after: int = 5, training_filter=None):
     """
     Build a time series of weekly total training time (hours) around a given week.
 
@@ -164,7 +166,7 @@ def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_aft
     # Fetch training activities in the window (canonical Activity + TrainingLogData.isTraining)
     start_utc_s, end_utc_excl_s = _utc_bounds_for_local_date_range(window_start, window_end)
 
-    candidate_activities = (
+    query = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
@@ -172,9 +174,9 @@ def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_aft
             Activity.start_time_utc >= start_utc_s,
             Activity.start_time_utc < end_utc_excl_s,
         )
-        .order_by(Activity.start_time_utc)
-        .all()
     )
+    query = apply_filter_to_query(query, TrainingLogData, training_filter)
+    candidate_activities = query.order_by(Activity.start_time_utc).all()
 
     # Initialize all week slots with zero seconds
     per_week_seconds = {}
@@ -337,14 +339,14 @@ def build_category_rollup_summary(activities, *, collapse_single_child_chains=Tr
 
     return rows
 
-def get_dashboard_context(week_offset=0):
+def get_dashboard_context(week_offset=0, training_filter=None):
     today = datetime.today().date()
     start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
     end_of_week = start_of_week + timedelta(days=6)
 
     start_utc_s, end_utc_excl_s = _utc_bounds_for_local_week(start_of_week, end_of_week)
 
-    candidate_activities = (
+    query = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
@@ -352,9 +354,9 @@ def get_dashboard_context(week_offset=0):
             Activity.start_time_utc >= start_utc_s,
             Activity.start_time_utc < end_utc_excl_s,
         )
-        .order_by(Activity.start_time_utc)
-        .all()
     )
+    query = apply_filter_to_query(query, TrainingLogData, training_filter)
+    candidate_activities = query.order_by(Activity.start_time_utc).all()
 
     # Now apply the *true* week membership test using activity-local date
     activities_by_day = defaultdict(list)
@@ -393,7 +395,7 @@ def get_dashboard_context(week_offset=0):
     previous_week_end = end_of_week - timedelta(weeks=1)
     prev_start_utc_s, prev_end_utc_excl_s = _utc_bounds_for_local_week(previous_week_start, previous_week_end)
 
-    previous_candidates = (
+    previous_query = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
@@ -401,9 +403,9 @@ def get_dashboard_context(week_offset=0):
             Activity.start_time_utc >= prev_start_utc_s,
             Activity.start_time_utc < prev_end_utc_excl_s,
         )
-        .order_by(Activity.start_time_utc)
-        .all()
     )
+    previous_query = apply_filter_to_query(previous_query, TrainingLogData, training_filter)
+    previous_candidates = previous_query.order_by(Activity.start_time_utc).all()
 
     previous_activities = []
     for a in previous_candidates:
@@ -416,7 +418,7 @@ def get_dashboard_context(week_offset=0):
     previous_week_summary = summarize_activities(previous_activities)
 
     # Weekly time series for the bar chart (about 11 weeks centered on this one)
-    weekly_series = build_weekly_time_series(start_of_week, weeks_before=5, weeks_after=5)
+    weekly_series = build_weekly_time_series(start_of_week, weeks_before=5, weeks_after=5, training_filter=training_filter)
 
     return {
         "start_of_week": start_of_week,
@@ -437,7 +439,7 @@ def get_dashboard_context(week_offset=0):
 def dashboard():
     week_offset = int(request.args.get("week_offset", 0))
 
-    context = get_dashboard_context(week_offset)
+    context = get_dashboard_context(week_offset, training_filter=get_active_filter())
     return render_template(
         "dashboard.html",
         **context
