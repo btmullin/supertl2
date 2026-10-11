@@ -32,6 +32,9 @@ def create_app():
     # TODO - Figure out what a secretkey really should be
     app.config['SECRET_KEY'] = 'secretkey'
 
+    # CARTO Basemaps API key (restricted, client-visible tile key — not a secret)
+    app.config['CARTO_API_KEY'] = os.environ.get('CARTO_API_KEY', 'cb1_4457_1_b76daf1effd05edfe692dcf0')
+
     # Ensure upload directory exists
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -49,5 +52,9 @@ def create_app():
             "active_filter": get_active_filter(),
             "filter_category_tree": get_category_tree_for_filter(),
         }
+
+    @app.context_processor
+    def inject_carto_api_key():
+        return {"carto_api_key": app.config['CARTO_API_KEY']}
 
     return app
