@@ -500,13 +500,14 @@ def upsert_daily_health():
 @views.route("/calendar")
 def calendar_view():
     view = request.args.get("view", "year")
+    training_filter = get_active_filter()
 
     today = date.today()
     year = request.args.get("year", type=int) or today.year
 
     if view == "month":
         month = request.args.get("month", type=int) or today.month
-        data = get_calendar_month_overview(year=year, month=month, use_local=True)
+        data = get_calendar_month_overview(year=year, month=month, use_local=True, training_filter=training_filter)
 
         return render_template(
             "calendar_month.html",
@@ -525,7 +526,7 @@ def calendar_view():
     if available_years and year not in available_years:
         # pick a sane default: most recent year with data
         year = available_years[-1]
-    data = get_calendar_year_overview(year=year, use_local=True)
+    data = get_calendar_year_overview(year=year, use_local=True, training_filter=training_filter)
     return render_template(
         "calendar_year.html",
         year=data["year"],
