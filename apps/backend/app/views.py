@@ -14,6 +14,7 @@ from flask import (
     redirect,
     current_app,
     flash,
+    session,
 )
 from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
@@ -48,6 +49,12 @@ from app.services.calendar import (
     get_available_years
 )
 from app.services.timezones import activity_local_dt
+from app.services.training_filter import (
+    get_active_filter,
+    set_active_filter,
+    clear_active_filter,
+    apply_filter_to_query,
+)
 from util.canonical.backfill_new_strava_to_canonical import backfill_new_strava
 from util.canonical.backfill_activity_timezones_util import backfill_activity_timezones, HOME_TZ
 from .forms.EditActivityForm import EditActivityForm
@@ -130,7 +137,7 @@ def _utc_bounds_for_local_date_range(start_local, end_local_inclusive):
         end_utc_excl.strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
-def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_after: int = 5):
+def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_after: int = 5, training_filter=None):
     """
     Build a time series of weekly total training time (hours) around a given week.
 
@@ -159,7 +166,7 @@ def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_aft
     # Fetch training activities in the window (canonical Activity + TrainingLogData.isTraining)
     start_utc_s, end_utc_excl_s = _utc_bounds_for_local_date_range(window_start, window_end)
 
-    candidate_activities = (
+    query = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
@@ -167,9 +174,9 @@ def build_weekly_time_series(center_week_start, weeks_before: int = 5, weeks_aft
             Activity.start_time_utc >= start_utc_s,
             Activity.start_time_utc < end_utc_excl_s,
         )
-        .order_by(Activity.start_time_utc)
-        .all()
     )
+    query = apply_filter_to_query(query, TrainingLogData, training_filter)
+    candidate_activities = query.order_by(Activity.start_time_utc).all()
 
     # Initialize all week slots with zero seconds
     per_week_seconds = {}
@@ -332,14 +339,14 @@ def build_category_rollup_summary(activities, *, collapse_single_child_chains=Tr
 
     return rows
 
-def get_dashboard_context(week_offset=0):
+def get_dashboard_context(week_offset=0, training_filter=None):
     today = datetime.today().date()
     start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
     end_of_week = start_of_week + timedelta(days=6)
 
     start_utc_s, end_utc_excl_s = _utc_bounds_for_local_week(start_of_week, end_of_week)
 
-    candidate_activities = (
+    query = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
@@ -347,9 +354,9 @@ def get_dashboard_context(week_offset=0):
             Activity.start_time_utc >= start_utc_s,
             Activity.start_time_utc < end_utc_excl_s,
         )
-        .order_by(Activity.start_time_utc)
-        .all()
     )
+    query = apply_filter_to_query(query, TrainingLogData, training_filter)
+    candidate_activities = query.order_by(Activity.start_time_utc).all()
 
     # Now apply the *true* week membership test using activity-local date
     activities_by_day = defaultdict(list)
@@ -388,7 +395,7 @@ def get_dashboard_context(week_offset=0):
     previous_week_end = end_of_week - timedelta(weeks=1)
     prev_start_utc_s, prev_end_utc_excl_s = _utc_bounds_for_local_week(previous_week_start, previous_week_end)
 
-    previous_candidates = (
+    previous_query = (
         sqla_db.session.query(Activity)
         .join(TrainingLogData, TrainingLogData.canonical_activity_id == Activity.id)
         .filter(
@@ -396,9 +403,9 @@ def get_dashboard_context(week_offset=0):
             Activity.start_time_utc >= prev_start_utc_s,
             Activity.start_time_utc < prev_end_utc_excl_s,
         )
-        .order_by(Activity.start_time_utc)
-        .all()
     )
+    previous_query = apply_filter_to_query(previous_query, TrainingLogData, training_filter)
+    previous_candidates = previous_query.order_by(Activity.start_time_utc).all()
 
     previous_activities = []
     for a in previous_candidates:
@@ -411,7 +418,7 @@ def get_dashboard_context(week_offset=0):
     previous_week_summary = summarize_activities(previous_activities)
 
     # Weekly time series for the bar chart (about 11 weeks centered on this one)
-    weekly_series = build_weekly_time_series(start_of_week, weeks_before=5, weeks_after=5)
+    weekly_series = build_weekly_time_series(start_of_week, weeks_before=5, weeks_after=5, training_filter=training_filter)
 
     return {
         "start_of_week": start_of_week,
@@ -432,11 +439,30 @@ def get_dashboard_context(week_offset=0):
 def dashboard():
     week_offset = int(request.args.get("week_offset", 0))
 
-    context = get_dashboard_context(week_offset)
+    context = get_dashboard_context(week_offset, training_filter=get_active_filter())
     return render_template(
         "dashboard.html",
         **context
     )
+
+
+@views.route("/filter", methods=["POST"])
+def set_training_filter():
+    category_id = request.form.get("category_id", type=int)
+    workout_type_ids = request.form.getlist("workout_type_ids", type=int)
+    sport = request.form.get("sport") or None
+    set_active_filter(
+        category_id=category_id,
+        workout_type_ids=workout_type_ids,
+        sport=sport,
+    )
+    return redirect(request.referrer or url_for("views.dashboard"))
+
+
+@views.route("/filter/clear", methods=["POST"])
+def clear_training_filter():
+    clear_active_filter()
+    return redirect(request.referrer or url_for("views.dashboard"))
 
 @views.route("/daily-health/upsert", methods=["POST"])
 def upsert_daily_health():
@@ -479,13 +505,14 @@ def upsert_daily_health():
 @views.route("/calendar")
 def calendar_view():
     view = request.args.get("view", "year")
+    training_filter = get_active_filter()
 
     today = date.today()
     year = request.args.get("year", type=int) or today.year
 
     if view == "month":
         month = request.args.get("month", type=int) or today.month
-        data = get_calendar_month_overview(year=year, month=month, use_local=True)
+        data = get_calendar_month_overview(year=year, month=month, use_local=True, training_filter=training_filter)
 
         return render_template(
             "calendar_month.html",
@@ -504,7 +531,7 @@ def calendar_view():
     if available_years and year not in available_years:
         # pick a sane default: most recent year with data
         year = available_years[-1]
-    data = get_calendar_year_overview(year=year, use_local=True)
+    data = get_calendar_year_overview(year=year, use_local=True, training_filter=training_filter)
     return render_template(
         "calendar_year.html",
         year=data["year"],
@@ -828,6 +855,7 @@ def season_view():
     summary = None
     weekly = None
     breakdown = None
+    stacked_weekly = None
 
     compare_ids = request.args.getlist("compare_id", type=int)
     compare_ids_param = request.args.get("compare_id", "").strip()
@@ -840,24 +868,41 @@ def season_view():
     if selected:
         compare_ids = [cid for cid in compare_ids if cid != selected.id]
     
+    training_filter = get_active_filter()
     if selected:
-        summary = get_season_summary(selected.start_date, selected.end_date, use_local=True)
-        weekly = get_season_weekly_series(selected.start_date, selected.end_date, use_local=True)
+        summary = get_season_summary(
+            selected.start_date, selected.end_date, use_local=True,
+            training_filter=training_filter,
+        )
+        weekly = get_season_weekly_series(
+            selected.start_date, selected.end_date, use_local=True,
+            training_filter=training_filter,
+        )
         stacked_weekly = get_season_weekly_stacked_by_category(
             selected.start_date,
             selected.end_date,
             use_local=True,
-            rollup_depth=0
+            rollup_depth=0,
+            training_filter=training_filter,
         )
         start_dt = _as_datetime_start(selected.start_date)
         end_dt_excl = _as_datetime_end_exclusive(selected.end_date)
-        breakdown = get_season_traininglog_category_breakdown(start_dt, end_dt_excl, use_local=True, rollup_depth=0, min_percent=2.0)
+        breakdown = get_season_traininglog_category_breakdown(
+            start_dt,
+            end_dt_excl,
+            use_local=True,
+            rollup_depth=0,
+            min_percent=2.0,
+            training_filter=training_filter,
+        )
 
-    compare_rows = get_season_comparison_rows(seasons)
+    compare_rows = get_season_comparison_rows(seasons, training_filter=training_filter)
 
     overlay = None
     if selected:
-        primary = get_season_cumulative_series(selected, use_local=True)
+        primary = get_season_cumulative_series(
+            selected, use_local=True, training_filter=training_filter
+        )
 
         # If in progress, mark "to date" and add a week marker
         today = _today_local_date()
@@ -865,7 +910,12 @@ def season_view():
         current_week_idx = _week_index(selected.start_date, min(today, selected.end_date), week_start=0) if in_progress else None
 
         compare_seasons = [s for s in seasons if s.id in compare_ids and s.id != selected.id]
-        others = [get_season_cumulative_series(s, use_local=True) for s in compare_seasons]
+        others = [
+            get_season_cumulative_series(
+                s, use_local=True, training_filter=training_filter
+            )
+            for s in compare_seasons
+        ]
 
         overlay = {
             "primary": primary,

@@ -13,6 +13,7 @@ from ..db.base import sqla_db
 from ..models.activity import Activity
 from ..models.traininglogdata import TrainingLogData
 from ..models.category import Category
+from .training_filter import apply_filter_to_query
 
 
 from datetime import datetime
@@ -92,7 +93,12 @@ def _daterange_weeks(start: date, end: date, week_start: int = 0) -> List[date]:
     return out
 
 
-def get_season_summary(season_start: date, season_end: date, use_local: bool = True) -> Dict[str, Any]:
+def get_season_summary(
+    season_start: date,
+    season_end: date,
+    use_local: bool = True,
+    training_filter=None,
+) -> Dict[str, Any]:
     """
     For in-progress seasons, weeks + avg/week are computed TO-DATE (through today),
     not through the configured season_end.
@@ -113,7 +119,7 @@ def get_season_summary(season_start: date, season_end: date, use_local: bool = T
     # Change these if your model fields differ.
     ts_col = Activity.start_time_local if use_local and hasattr(Activity, "start_time_local") else Activity.start_time_utc
 
-    total_seconds, sessions = (
+    summary_query = (
         sqla_db.session.query(
             func.coalesce(func.sum(Activity.moving_time_s), 0),
             func.count(Activity.id),
@@ -127,8 +133,11 @@ def get_season_summary(season_start: date, season_end: date, use_local: bool = T
             ts_col >= start_dt,
             ts_col < end_dt_excl,
         )
-        .one()
     )
+    summary_query = apply_filter_to_query(
+        summary_query, TrainingLogData, training_filter
+    )
+    total_seconds, sessions = summary_query.one()
 
     total_seconds = int(total_seconds or 0)
     sessions = int(sessions or 0)
@@ -148,7 +157,12 @@ def get_season_summary(season_start: date, season_end: date, use_local: bool = T
     }
 
 
-def get_season_weekly_series(season_start: date, season_end: date, use_local: bool = True) -> Dict[str, Any]:
+def get_season_weekly_series(
+    season_start: date,
+    season_end: date,
+    use_local: bool = True,
+    training_filter=None,
+) -> Dict[str, Any]:
     """
     Returns a dict ready to chart:
 
@@ -168,7 +182,7 @@ def get_season_weekly_series(season_start: date, season_end: date, use_local: bo
 
     # Fetch all activities in range (id + date + seconds) and bucket in Python.
     # This avoids SQLite timezone/date quirks and keeps “week starts Monday” consistent.
-    rows = (
+    rows_query = (
         sqla_db.session.query(ts_col, Activity.moving_time_s)
         .join(
             TrainingLogData,
@@ -179,8 +193,8 @@ def get_season_weekly_series(season_start: date, season_end: date, use_local: bo
             ts_col >= start_dt,
             ts_col < end_dt_excl,
         )
-        .all()
     )
+    rows = apply_filter_to_query(rows_query, TrainingLogData, training_filter).all()
 
     buckets: Dict[date, int] = {}
     for ts, secs in rows:
@@ -253,7 +267,8 @@ def get_season_traininglog_category_breakdown(
     season_end_dt_excl,
     use_local=True,
     rollup_depth: int | None = 2,   # <-- set None to keep full leaf level
-    min_percent: float = 2.0        # <-- collapse tiny slices into "Other"
+    min_percent: float = 2.0,       # <-- collapse tiny slices into "Other"
+    training_filter=None,
 ):
     """
     Training-only category distribution using TrainingLogData.categoryId.
@@ -266,7 +281,7 @@ def get_season_traininglog_category_breakdown(
     ts_col = Activity.start_time_local if use_local and hasattr(Activity, "start_time_local") else Activity.start_time_utc
 
     # 1) Sum seconds by *leaf* categoryId (unique key)
-    rows = (
+    rows_query = (
         sqla_db.session.query(
             TrainingLogData.categoryId.label("category_id"),
             func.coalesce(func.sum(Activity.moving_time_s), 0).label("seconds"),
@@ -278,6 +293,9 @@ def get_season_traininglog_category_breakdown(
             ts_col >= season_start_dt,
             ts_col < season_end_dt_excl,
         )
+    )
+    rows = (
+        apply_filter_to_query(rows_query, TrainingLogData, training_filter)
         .group_by(TrainingLogData.categoryId)
         .all()
     )
@@ -334,7 +352,7 @@ def get_season_traininglog_category_breakdown(
 
     return {"total_hours": total_seconds / 3600.0, "items": out}
 
-def get_season_comparison_rows(seasons) -> List[Dict[str, Any]]:
+def get_season_comparison_rows(seasons, training_filter=None) -> List[Dict[str, Any]]:
     """
     Returns rows suitable for a comparison table.
     Uses the same definition of "training" as the dashboard:
@@ -342,14 +360,24 @@ def get_season_comparison_rows(seasons) -> List[Dict[str, Any]]:
     """
     rows = []
     for s in seasons:
-        summary = get_season_summary(s.start_date, s.end_date, use_local=True)
+        summary = get_season_summary(
+            s.start_date,
+            s.end_date,
+            use_local=True,
+            training_filter=training_filter,
+        )
 
         # (Optional) add one “headline category” at a rolled-up depth:
         # If you don’t want this yet, delete this block.
         start_dt = _as_datetime_start(s.start_date)
         end_dt_excl = _as_datetime_end_exclusive(s.end_date)
         breakdown = get_season_traininglog_category_breakdown(
-            start_dt, end_dt_excl, use_local=True, rollup_depth=1, min_percent=0.0
+            start_dt,
+            end_dt_excl,
+            use_local=True,
+            rollup_depth=1,
+            min_percent=0.0,
+            training_filter=training_filter,
         )
         top_cat = None
         if breakdown and breakdown.get("items"):
@@ -390,8 +418,13 @@ def build_cumulative_from_weekly(weekly: dict) -> dict:
         })
     return {"weeks": out}
 
-def get_season_cumulative_series(season, use_local=True) -> dict:
-    weekly = get_season_weekly_series(season.start_date, season.end_date, use_local=use_local)
+def get_season_cumulative_series(season, use_local=True, training_filter=None) -> dict:
+    weekly = get_season_weekly_series(
+        season.start_date,
+        season.end_date,
+        use_local=use_local,
+        training_filter=training_filter,
+    )
     cum = build_cumulative_from_weekly(weekly)
     return {
         "season_id": season.id,
@@ -404,6 +437,7 @@ def get_season_weekly_stacked_by_category(
     season_end,
     use_local=True,
     rollup_depth=1,   # top-level sport/category
+    training_filter=None,
 ):
     """
     Returns weekly stacked hours by TrainingLog category (rolled up to rollup_depth).
@@ -416,7 +450,7 @@ def get_season_weekly_stacked_by_category(
     end_dt_excl = _as_datetime_end_exclusive(season_end)
 
     # Pull timestamp, moving time, and leaf categoryId (training-only)
-    rows = (
+    rows_query = (
         sqla_db.session.query(
             ts_col,
             Activity.moving_time_s,
@@ -429,8 +463,10 @@ def get_season_weekly_stacked_by_category(
             ts_col >= start_dt,
             ts_col < end_dt_excl,
         )
-        .all()
     )
+    rows = apply_filter_to_query(
+        rows_query, TrainingLogData, training_filter
+    ).all()
 
     # Category metadata
     full_paths, depth_map = _build_category_full_paths()

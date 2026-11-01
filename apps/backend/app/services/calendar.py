@@ -11,6 +11,7 @@ from ..db.base import sqla_db
 from ..models import Activity, TrainingLogData
 from ..services.dates import start_of_week, week_offset_for_date
 from ..services.analytics import get_local_date_for_activity
+from ..services.training_filter import apply_filter_to_query
 
 
 def _local_day_expr_from_offset_minutes(utc_text_col, offset_minutes_col):
@@ -70,7 +71,7 @@ def _month_bounds(year: int, month: int) -> tuple[date, date]:
     return start, end
 
 
-def get_calendar_year_overview(year: int, use_local: bool = True) -> Dict[str, Any]:
+def get_calendar_year_overview(year: int, use_local: bool = True, training_filter=None) -> Dict[str, Any]:
     """
     Returns data for a server-rendered "Year Overview" calendar page.
 
@@ -126,9 +127,9 @@ def get_calendar_year_overview(year: int, use_local: bool = True) -> Dict[str, A
             day_expr >= f"{year:04d}-01-01",
             day_expr <= f"{year:04d}-12-31",
         )
-        .group_by(day_expr)
-        .all()
     )
+    rows = apply_filter_to_query(rows, TrainingLogData, training_filter)
+    rows = rows.group_by(day_expr).all()
 
     # Map date -> totals
     by_day: Dict[date, DayTotals] = {}
@@ -193,7 +194,7 @@ def get_calendar_year_overview(year: int, use_local: bool = True) -> Dict[str, A
         "months": months,
     }
 
-def get_calendar_month_overview(year: int, month: int, use_local: bool = True):
+def get_calendar_month_overview(year: int, month: int, use_local: bool = True, training_filter=None):
     # Bounds for the month
     days_in_month = monthrange(year, month)[1]
     month_start = date(year, month, 1)
@@ -224,9 +225,9 @@ def get_calendar_month_overview(year: int, month: int, use_local: bool = True):
             day_expr >= grid_start.isoformat(),
             day_expr <= grid_end.isoformat(),
         )
-        .group_by(day_expr)
-        .all()
     )
+    rows = apply_filter_to_query(rows, TrainingLogData, training_filter)
+    rows = rows.group_by(day_expr).all()
 
     by_day = {}
     for r in rows:
