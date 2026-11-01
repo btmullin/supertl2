@@ -450,7 +450,12 @@ def dashboard():
 def set_training_filter():
     category_id = request.form.get("category_id", type=int)
     workout_type_ids = request.form.getlist("workout_type_ids", type=int)
-    set_active_filter(category_id=category_id, workout_type_ids=workout_type_ids)
+    sport = request.form.get("sport") or None
+    set_active_filter(
+        category_id=category_id,
+        workout_type_ids=workout_type_ids,
+        sport=sport,
+    )
     return redirect(request.referrer or url_for("views.dashboard"))
 
 
@@ -850,6 +855,7 @@ def season_view():
     summary = None
     weekly = None
     breakdown = None
+    stacked_weekly = None
 
     compare_ids = request.args.getlist("compare_id", type=int)
     compare_ids_param = request.args.get("compare_id", "").strip()
@@ -862,24 +868,41 @@ def season_view():
     if selected:
         compare_ids = [cid for cid in compare_ids if cid != selected.id]
     
+    training_filter = get_active_filter()
     if selected:
-        summary = get_season_summary(selected.start_date, selected.end_date, use_local=True)
-        weekly = get_season_weekly_series(selected.start_date, selected.end_date, use_local=True)
+        summary = get_season_summary(
+            selected.start_date, selected.end_date, use_local=True,
+            training_filter=training_filter,
+        )
+        weekly = get_season_weekly_series(
+            selected.start_date, selected.end_date, use_local=True,
+            training_filter=training_filter,
+        )
         stacked_weekly = get_season_weekly_stacked_by_category(
             selected.start_date,
             selected.end_date,
             use_local=True,
-            rollup_depth=0
+            rollup_depth=0,
+            training_filter=training_filter,
         )
         start_dt = _as_datetime_start(selected.start_date)
         end_dt_excl = _as_datetime_end_exclusive(selected.end_date)
-        breakdown = get_season_traininglog_category_breakdown(start_dt, end_dt_excl, use_local=True, rollup_depth=0, min_percent=2.0)
+        breakdown = get_season_traininglog_category_breakdown(
+            start_dt,
+            end_dt_excl,
+            use_local=True,
+            rollup_depth=0,
+            min_percent=2.0,
+            training_filter=training_filter,
+        )
 
-    compare_rows = get_season_comparison_rows(seasons)
+    compare_rows = get_season_comparison_rows(seasons, training_filter=training_filter)
 
     overlay = None
     if selected:
-        primary = get_season_cumulative_series(selected, use_local=True)
+        primary = get_season_cumulative_series(
+            selected, use_local=True, training_filter=training_filter
+        )
 
         # If in progress, mark "to date" and add a week marker
         today = _today_local_date()
@@ -887,7 +910,12 @@ def season_view():
         current_week_idx = _week_index(selected.start_date, min(today, selected.end_date), week_start=0) if in_progress else None
 
         compare_seasons = [s for s in seasons if s.id in compare_ids and s.id != selected.id]
-        others = [get_season_cumulative_series(s, use_local=True) for s in compare_seasons]
+        others = [
+            get_season_cumulative_series(
+                s, use_local=True, training_filter=training_filter
+            )
+            for s in compare_seasons
+        ]
 
         overlay = {
             "primary": primary,

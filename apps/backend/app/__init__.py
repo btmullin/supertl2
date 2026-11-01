@@ -47,10 +47,17 @@ def create_app():
 
     @app.context_processor
     def inject_training_filter():
-        from .services.training_filter import get_active_filter, get_category_tree_for_filter
+        from .services.training_filter import (
+            get_active_filter,
+            get_category_tree_for_filter,
+            get_sports_for_filter,
+            get_workout_types_for_filter,
+        )
         return {
             "active_filter": get_active_filter(),
             "filter_category_tree": get_category_tree_for_filter(),
+            "filter_sports": get_sports_for_filter(),
+            "filter_workout_types": get_workout_types_for_filter(),
         }
 
     @app.context_processor

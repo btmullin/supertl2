@@ -1,11 +1,25 @@
-<div class="filter-bar-inner d-flex align-items-center gap-2">
-  <form method="post" action="{{ url_for('views.set_training_filter') }}" class="d-flex align-items-center gap-2 mb-0">
-    <label for="filter-category-select" class="mb-0 small-text">Filter:</label>
+<div class="filter-bar-inner d-flex align-items-center flex-wrap gap-2">
+  <form method="post" action="{{ url_for('views.set_training_filter') }}" class="d-flex align-items-center flex-wrap gap-2 mb-0">
+    <label for="filter-sport-select" class="mb-0 small-text">Filter:</label>
+    <select id="filter-sport-select" name="sport" onchange="this.form.submit()" class="form-select form-select-sm w-auto">
+      <option value="">All sports</option>
+      {% for sport in filter_sports %}
+        <option value="{{ sport }}" {% if active_filter.sport == sport %}selected{% endif %}>{{ sport }}</option>
+      {% endfor %}
+    </select>
     <select id="filter-category-select" name="category_id" onchange="this.form.submit()" class="form-select form-select-sm w-auto">
-      <option value="">All Training</option>
+      <option value="">All categories</option>
       {% for cat in filter_category_tree %}
         <option value="{{ cat.id }}" {% if active_filter.category_id == cat.id %}selected{% endif %}>
           {{ ('&nbsp;&nbsp;' * cat.depth) | safe }}{{ cat.name }}
+        </option>
+      {% endfor %}
+    </select>
+    <select id="filter-workout-type-select" name="workout_type_ids" onchange="this.form.submit()" class="form-select form-select-sm w-auto">
+      <option value="">All workout types</option>
+      {% for workout_type in filter_workout_types %}
+        <option value="{{ workout_type.id }}" {% if workout_type.id in active_filter.workout_type_ids %}selected{% endif %}>
+          {{ workout_type.name }}
         </option>
       {% endfor %}
     </select>

@@ -1,7 +1,6 @@
-"""Global session-backed training filter (category / workout type).
+"""Global session-backed training filter (sport / category / workout type).
 
-Lets a user narrow the dashboard, calendar, and season views down to a
-single category branch (e.g. "Running" including "Trail Running") without
+Lets a user narrow the dashboard, calendar, and season views without
 threading query-string params through every page.
 """
 from __future__ import annotations
@@ -12,7 +11,7 @@ from typing import List, Optional, Set
 from flask import session
 
 from ..db.base import sqla_db
-from ..models import Category, WorkoutType
+from ..models import Activity, Category, TrainingLogData, WorkoutType
 
 SESSION_KEY = "training_filter"
 
@@ -21,10 +20,11 @@ SESSION_KEY = "training_filter"
 class TrainingFilter:
     category_id: Optional[int] = None
     workout_type_ids: List[int] = field(default_factory=list)
+    sport: Optional[str] = None
 
     @property
     def is_active(self) -> bool:
-        return self.category_id is not None or bool(self.workout_type_ids)
+        return self.category_id is not None or bool(self.workout_type_ids) or self.sport is not None
 
 
 def _build_children_map():
@@ -57,6 +57,7 @@ def get_active_filter() -> TrainingFilter:
 
     category_id = raw.get("category_id")
     workout_type_ids = raw.get("workout_type_ids") or []
+    sport = raw.get("sport") or None
 
     # Re-validate against the DB so stale/deleted ids don't silently persist.
     if category_id is not None:
@@ -70,13 +71,27 @@ def get_active_filter() -> TrainingFilter:
         }
         workout_type_ids = [wid for wid in workout_type_ids if wid in valid_ids]
 
-    return TrainingFilter(category_id=category_id, workout_type_ids=workout_type_ids)
+    if sport is not None:
+        exists = sqla_db.session.query(Activity.id).filter(Activity.sport == sport).first()
+        if exists is None:
+            sport = None
+
+    return TrainingFilter(
+        category_id=category_id,
+        workout_type_ids=workout_type_ids,
+        sport=sport,
+    )
 
 
-def set_active_filter(category_id: Optional[int] = None, workout_type_ids: Optional[List[int]] = None) -> None:
+def set_active_filter(
+    category_id: Optional[int] = None,
+    workout_type_ids: Optional[List[int]] = None,
+    sport: Optional[str] = None,
+) -> None:
     session[SESSION_KEY] = {
         "category_id": category_id,
         "workout_type_ids": workout_type_ids or [],
+        "sport": sport or None,
     }
 
 
@@ -84,8 +99,13 @@ def clear_active_filter() -> None:
     session.pop(SESSION_KEY, None)
 
 
-def apply_filter_to_query(query, training_log_model, training_filter: Optional[TrainingFilter]):
-    """Apply the active filter's category/workout-type constraints to a query.
+def apply_filter_to_query(
+    query,
+    training_log_model,
+    training_filter: Optional[TrainingFilter],
+    activity_model=Activity,
+):
+    """Apply the active filter's sport/category/workout-type constraints.
 
     `training_log_model` is the TrainingLogData model/alias already joined
     into `query`.
@@ -99,6 +119,9 @@ def apply_filter_to_query(query, training_log_model, training_filter: Optional[T
 
     if training_filter.workout_type_ids:
         query = query.filter(training_log_model.workoutTypeId.in_(training_filter.workout_type_ids))
+
+    if training_filter.sport is not None:
+        query = query.filter(activity_model.sport == training_filter.sport)
 
     return query
 
@@ -125,3 +148,32 @@ def get_category_tree_for_filter():
 
     walk(None, 0)
     return out
+
+
+def get_workout_types_for_filter():
+    """Return workout types in display order for the shared filter control."""
+    return (
+        sqla_db.session.query(WorkoutType.id, WorkoutType.name)
+        .filter(WorkoutType.name.isnot(None))
+        .order_by(WorkoutType.name)
+        .all()
+    )
+
+
+def get_sports_for_filter():
+    """Return sports with at least one training activity, in display order."""
+    return [
+        sport
+        for (sport,) in (
+            sqla_db.session.query(Activity.sport)
+            .join(
+                TrainingLogData,
+                TrainingLogData.canonical_activity_id == Activity.id,
+            )
+            .filter(TrainingLogData.isTraining == 1)
+            .filter(Activity.sport.isnot(None), Activity.sport != "")
+            .distinct()
+            .order_by(Activity.sport)
+            .all()
+        )
+    ]
